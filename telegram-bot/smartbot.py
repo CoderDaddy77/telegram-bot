@@ -189,15 +189,21 @@ def keep_alive():
 # PAGINATION: SEND FILES
 # ======================
 
-async def send_page(update, context, msg_ids, page, category):
+async def send_page(update, context, msg_ids, page, category, send_all=False):
     """Forward a single page of files and show pagination buttons."""
     total = len(msg_ids)
-    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
-    page = max(0, min(page, total_pages - 1))
-
-    start = page * PAGE_SIZE
-    end = min(start + PAGE_SIZE, total)
-    page_ids = msg_ids[start:end]
+    if send_all:
+        total_pages = 1
+        page = 0
+        start = 0
+        end = total
+        page_ids = msg_ids
+    else:
+        total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+        page = max(0, min(page, total_pages - 1))
+        start = page * PAGE_SIZE
+        end = min(start + PAGE_SIZE, total)
+        page_ids = msg_ids[start:end]
 
     chat_id = update.effective_chat.id
 
@@ -214,18 +220,21 @@ async def send_page(update, context, msg_ids, page, category):
                 message_id=msg_id
             )
             context.user_data["sent_messages"].append(fwd.message_id)
+            if send_all and len(page_ids) > 5:
+                await asyncio.sleep(0.1)
         except Exception:
             pass  # Skip deleted/inaccessible messages
 
     # Build pagination buttons
-    buttons = []
-    if page > 0:
-        buttons.append(InlineKeyboardButton("⬅️ Prev", callback_data=f"page_{category}_{page-1}"))
-    buttons.append(InlineKeyboardButton(f"📄 {page+1}/{total_pages}", callback_data="noop"))
-    if page < total_pages - 1:
-        buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"page_{category}_{page+1}"))
-
-    keyboard = [buttons]
+    keyboard = []
+    if not send_all:
+        buttons = []
+        if page > 0:
+            buttons.append(InlineKeyboardButton("⬅️ Prev", callback_data=f"page_{category}_{page-1}"))
+        buttons.append(InlineKeyboardButton(f"📄 {page+1}/{total_pages}", callback_data="noop"))
+        if page < total_pages - 1:
+            buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"page_{category}_{page+1}"))
+        keyboard.append(buttons)
 
     # Add save to favorites button
     keyboard.append([InlineKeyboardButton("⭐ Save All to Favorites", callback_data=f"savepage_{start}_{end}_{category}")])
@@ -238,7 +247,7 @@ async def send_page(update, context, msg_ids, page, category):
     )
     context.user_data["sent_messages"].append(info_msg.message_id)
 
-async def send_category(update, context, category, count):
+async def send_category(update, context, category, count, send_all=False):
     """Prepare the message IDs for a category and send the first page."""
     data = load_data()
     all_vids = get_all_videos(data)
@@ -297,7 +306,7 @@ async def send_category(update, context, category, count):
     track_user(data, user_id)
     update_user_stats(data, user_id, category, len(ids))
 
-    await send_page(update, context, ids, 0, category)
+    await send_page(update, context, ids, 0, category, send_all=send_all)
 
 # ======================
 # /start COMMAND
@@ -604,7 +613,7 @@ async def all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         accessible = get_accessible_categories(data, user_id)
         count = sum(len(v) for v in accessible.values())
 
-    await send_category(update, context, category, count)
+    await send_category(update, context, category, count, send_all=True)
     context.user_data.pop("category", None)
 
 async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
