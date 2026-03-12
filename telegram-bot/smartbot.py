@@ -31,8 +31,11 @@ ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.
 
 DATA_FILE = "data.json"
 PAGE_SIZE = 5
-MAX_PER_REQUEST = 10
-DAILY_LIMIT = 50
+
+# --- Free vs Premium Limits ---
+FREE_MAX_PER_REQUEST = 5          # Free users: max 5 files per request
+FREE_DAILY_LIMIT = 50             # Free users: 50 files/day
+# Premium + Admin = UNLIMITED (no cap)
 
 # ======================
 # DATA HELPERS
@@ -49,11 +52,42 @@ def save_data(data):
 def is_admin(user_id):
     return user_id in ADMIN_IDS
 
+def is_premium(data, user_id):
+    """Check if user is premium. Admins are always premium."""
+    if is_admin(user_id):
+        return True
+    return user_id in data.get("premium_users", [])
+
+def is_premium_category(data, category_name):
+    """Check if category is in premium list."""
+    return category_name in data.get("premium_categories", [])
+
+def get_max_per_request(data, user_id):
+    """Get max files per request based on user tier."""
+    if is_admin(user_id) or is_premium(data, user_id):
+        return 999999  # Unlimited for premium + admin
+    return FREE_MAX_PER_REQUEST
+
+def get_daily_limit(data, user_id):
+    """Get daily limit based on user tier."""
+    if is_admin(user_id) or is_premium(data, user_id):
+        return 999999  # Unlimited for premium + admin
+    return FREE_DAILY_LIMIT
+
 def get_all_videos(data):
     all_vids = []
     for ids in data["categories"].values():
         all_vids.extend(ids)
     return all_vids
+
+def get_accessible_categories(data, user_id):
+    """Return categories the user can access."""
+    result = {}
+    for cat, ids in data["categories"].items():
+        if is_premium_category(data, cat) and not is_premium(data, user_id):
+            continue  # Skip premium categories for free users
+        result[cat] = ids
+    return result
 
 def track_user(data, user_id):
     uid = str(user_id)
@@ -66,10 +100,14 @@ def track_user(data, user_id):
         }
     if user_id not in data["known_users"]:
         data["known_users"].append(user_id)
+    # Ensure premium_users list exists
+    if "premium_users" not in data:
+        data["premium_users"] = []
     return data
 
 def check_daily_limit(data, user_id, count):
     """Returns (allowed_count, remaining). Admins get unlimited."""
+    daily_limit = get_daily_limit(data, user_id)
     if is_admin(user_id):
         return count, 999999
 
@@ -82,7 +120,7 @@ def check_daily_limit(data, user_id, count):
         stats["last_date"] = today
 
     used = stats.get("daily_count", 0)
-    remaining = max(0, DAILY_LIMIT - used)
+    remaining = max(0, daily_limit - used)
     allowed = min(count, remaining)
     return allowed, remaining
 
@@ -104,6 +142,14 @@ def update_user_stats(data, user_id, category, count):
         stats["fav_categories"] = cats
 
     save_data(data)
+
+def get_user_tier_text(data, user_id):
+    """Return tier emoji + text for display."""
+    if is_admin(user_id):
+        return "👑 Admin"
+    if is_premium(data, user_id):
+        return "💎 Premium"
+    return "🆓 Free"
 
 # ======================
 # KEEP ALIVE (Replit)
@@ -181,16 +227,40 @@ async def send_category(update, context, category, count):
     all_vids = get_all_videos(data)
     user_id = update.effective_user.id
 
+    # Premium category access check
+    if is_premium_category(data, category) and not is_premium(data, user_id):
+        await update.message.reply_text(
+            "🔒 **Premium Content!**\n\n"
+            "Ye category sirf Premium users ke liye hai.\n\n"
+            "💎 Premium benefits:\n"
+            f"• 📂 Premium categories access\n"
+            f"• 📤 Unlimited files per request\n"
+            f"• 📅 Unlimited daily access\n"
+            "• 🔓 /all command access\n\n"
+            "Admin se contact karo premium lene ke liye! 🚀",
+            parse_mode="Markdown"
+        )
+        return
+
     if category == "🎲 Random":
-        pool = all_vids
+        # For random, only use accessible categories
+        accessible = get_accessible_categories(data, user_id)
+        pool = []
+        for ids in accessible.values():
+            pool.extend(ids)
         ids = random.sample(pool, min(count, len(pool)))
     elif category == "🆕 Latest":
-        ids = sorted(all_vids, reverse=True)[:count]
+        accessible = get_accessible_categories(data, user_id)
+        pool = []
+        for ids_list in accessible.values():
+            pool.extend(ids_list)
+        ids = sorted(pool, reverse=True)[:count]
     elif category == "🔥 Surprise":
-        cats = list(data["categories"].keys())
+        accessible = get_accessible_categories(data, user_id)
+        cats = list(accessible.keys())
         if cats:
             rand_cat = random.choice(cats)
-            pool = data["categories"][rand_cat]
+            pool = accessible[rand_cat]
             ids = random.sample(pool, min(count, len(pool)))
         else:
             ids = []
@@ -216,16 +286,49 @@ async def send_category(update, context, category, count):
 # /start COMMAND
 # ======================
 
-WELCOME_TEXT = """
+WELCOME_FREE = """
 ╔══════════════════════════════╗
-║    🤖 SmartBot — Premium     ║
+║    🤖 SmartBot — Free Tier    ║
 ╠══════════════════════════════╣
 ║                              ║
-║  🎬 Best Content Collection  ║
-║  ⚡ Fast & Reliable              ║
-║  ⭐ Save Favorites               ║
-║  📊 Track Your Stats            ║
-║                                   ║
+║  🎬 Content Collection       ║
+║  ⚡ Fast & Reliable          ║
+║  ⭐ Save Favorites           ║
+║  📊 Track Your Stats         ║
+║                              ║
+║  💎 /upgrade for Premium!    ║
+║                              ║
+╚══════════════════════════════╝
+
+👇 Category choose karo:
+"""
+
+WELCOME_PREMIUM = """
+╔══════════════════════════════╗
+║  🤖 SmartBot — 💎 Premium    ║
+╠══════════════════════════════╣
+║                              ║
+║  🎬 ALL Content Unlocked     ║
+║  ⚡ Fast & Reliable          ║
+║  📤 10 Files Per Request     ║
+║  🔓 /all Command Access      ║
+║  ⭐ Save Favorites           ║
+║  📊 Track Your Stats         ║
+║                              ║
+╚══════════════════════════════╝
+
+👇 Category choose karo:
+"""
+
+WELCOME_ADMIN = """
+╔══════════════════════════════╗
+║  🤖 SmartBot — 👑 Admin      ║
+╠══════════════════════════════╣
+║                              ║
+║  🎬 ALL Content Unlocked     ║
+║  ⚡ Unlimited Access         ║
+║  🔧 Full Admin Controls      ║
+║                              ║
 ╚══════════════════════════════╝
 
 👇 Category choose karo:
@@ -237,13 +340,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     track_user(data, user_id)
     save_data(data)
 
+    # Select welcome text based on tier
+    if is_admin(user_id):
+        welcome = WELCOME_ADMIN
+    elif is_premium(data, user_id):
+        welcome = WELCOME_PREMIUM
+    else:
+        welcome = WELCOME_FREE
+
     keyboard = []
 
-    for cat, ids in data["categories"].items():
-        keyboard.append([InlineKeyboardButton(f"📂 {cat} ({len(ids)})", callback_data=f"cat_{cat}")])
+    accessible = get_accessible_categories(data, user_id)
+
+    # Show accessible categories
+    for cat, ids in accessible.items():
+        if is_premium_category(data, cat):
+            keyboard.append([InlineKeyboardButton(f"💎 {cat} ({len(ids)})", callback_data=f"cat_{cat}")])
+        else:
+            keyboard.append([InlineKeyboardButton(f"📂 {cat} ({len(ids)})", callback_data=f"cat_{cat}")])
+
+    # Show locked premium categories for free users (greyed out / teaser)
+    if not is_premium(data, user_id):
+        for cat, ids in data["categories"].items():
+            if is_premium_category(data, cat):
+                keyboard.append([InlineKeyboardButton(f"🔒 {cat} ({len(ids)}) — Premium Only", callback_data=f"cat_{cat}")])
 
     # Special categories
-    total = len(get_all_videos(data))
+    accessible_vids = []
+    for ids_list in accessible.values():
+        accessible_vids.extend(ids_list)
+    total = len(accessible_vids)
+
     keyboard.append([InlineKeyboardButton(f"🎲 Random ({total})", callback_data="cat_🎲 Random")])
     keyboard.append([InlineKeyboardButton(f"🆕 Latest ({total})", callback_data="cat_🆕 Latest")])
     keyboard.append([InlineKeyboardButton(f"🔥 Surprise", callback_data="cat_🔥 Surprise")])
@@ -251,8 +378,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard.append([InlineKeyboardButton("⭐ My Favorites", callback_data="show_favs")])
     keyboard.append([InlineKeyboardButton("📊 My Stats", callback_data="show_stats")])
 
+    # Upgrade button for free users
+    if not is_premium(data, user_id) and not is_admin(user_id):
+        keyboard.append([InlineKeyboardButton("💎 Upgrade to Premium!", callback_data="show_upgrade")])
+
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(WELCOME_TEXT, reply_markup=reply_markup)
+    await update.message.reply_text(welcome, reply_markup=reply_markup)
 
 # ======================
 # BUTTON HANDLERS
@@ -272,17 +403,52 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["category"] = category
 
         data = load_data()
+        user_id = update.effective_user.id
+
+        # Premium category check
+        if is_premium_category(data, category) and not is_premium(data, user_id):
+            await query.message.reply_text(
+                "🔒 **Premium Content!**\n\n"
+                "Ye category sirf 💎 Premium users ke liye hai.\n\n"
+                "Premium benefits:\n"
+                f"• 📂 Premium exclusive categories\n"
+                f"• 📤 Unlimited files per request (free: {FREE_MAX_PER_REQUEST})\n"
+                f"• 📅 Unlimited daily access (free: {FREE_DAILY_LIMIT}/day)\n"
+                "• 🔓 /all command — sab files ek sath!\n\n"
+                "Admin se contact karo premium ke liye! 🚀",
+                parse_mode="Markdown"
+            )
+            context.user_data.pop("category", None)
+            return
+
         if category in data["categories"]:
             count = len(data["categories"][category])
         else:
-            count = len(get_all_videos(data))
+            accessible = get_accessible_categories(data, user_id)
+            count = sum(len(v) for v in accessible.values())
+
+        max_req = get_max_per_request(data, user_id)
+
+        # Build instruction text based on tier
+        tier_info = ""
+        if is_admin(user_id):
+            tier_info = "👑 Admin — Unlimited access\n"
+        elif is_premium(data, user_id):
+            tier_info = f"💎 Premium — Max {max_req} per request\n"
+        else:
+            tier_info = f"🆓 Free — Max {max_req} per request\n"
+
+        all_text = ""
+        if is_premium(data, user_id) or is_admin(user_id):
+            all_text = "• Ya /all bhejo sab ke liye 🔥\n"
 
         await query.message.reply_text(
-            f"📂 **{category}** selected ({count} files available)\n\n"
+            f"📂 **{category}** selected ({count} files available)\n"
+            f"{tier_info}\n"
             f"Kitni files chahiye?\n"
             f"• Number bhejo: `5`\n"
             f"• Range bhejo: `8-15`\n"
-            f"• Ya /all bhejo sab ke liye",
+            f"{all_text}",
             parse_mode="Markdown"
         )
         return
@@ -344,14 +510,68 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_my_stats(update, context, from_button=True)
         return
 
+    # --- Show upgrade info ---
+    if data_str == "show_upgrade":
+        await show_upgrade_info(update, context, from_button=True)
+        return
+
+# ======================
+# UPGRADE INFO
+# ======================
+
+async def show_upgrade_info(update, context, from_button=False):
+    data = load_data()
+    user_id = update.effective_user.id
+
+    if is_premium(data, user_id):
+        text = (
+            "💎 **You're Already Premium!**\n"
+            "━━━━━━━━━━━━━━━━━━━\n\n"
+            "Tumhare paas already premium access hai! Enjoy karo! 🎉"
+        )
+    else:
+        text = (
+            "💎 **Upgrade to Premium!**\n"
+            "━━━━━━━━━━━━━━━━━━━\n\n"
+            "🆓 **Free Tier:**\n"
+            f"  • {FREE_MAX_PER_REQUEST} files per request\n"
+            f"  • {FREE_DAILY_LIMIT} files per day\n"
+            "  • Basic categories only\n"
+            "  • ❌ No /all command\n\n"
+            "💎 **Premium Tier:**\n"
+            f"  • ♾️ Unlimited files per request\n"
+            f"  • ♾️ Unlimited files per day\n"
+            "  • 🔓 ALL categories (Premium 🔥 included!)\n"
+            "  • ✅ /all command — sab files ek sath!\n"
+            "  • ⚡ Priority support\n\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            "📩 **Premium lene ke liye Admin se contact karo!**"
+        )
+
+    if from_button:
+        await update.callback_query.message.reply_text(text, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(text, parse_mode="Markdown")
+
+async def upgrade_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await show_upgrade_info(update, context, from_button=False)
+
 # ======================
 # NUMBER INPUT / /all
 # ======================
 
 async def all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Admin-only command
-    if not is_admin(update.effective_user.id):
-        await update.message.reply_text("🚫 /all command sirf admins ke liye hai.\n\nNumber ya range bhejo (e.g. `5` ya `1-10`)", parse_mode="Markdown")
+    data = load_data()
+    user_id = update.effective_user.id
+
+    # Premium + Admin can use /all
+    if not is_premium(data, user_id):
+        await update.message.reply_text(
+            "🔒 **/all sirf 💎 Premium aur 👑 Admin ke liye hai!**\n\n"
+            f"Free users max {FREE_MAX_PER_REQUEST} files per request bhej sakte hain.\n\n"
+            "💎 /upgrade se premium benefits dekho!",
+            parse_mode="Markdown"
+        )
         return
 
     if "category" not in context.user_data:
@@ -364,7 +584,8 @@ async def all_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if category in data["categories"]:
         count = len(data["categories"][category])
     else:
-        count = len(get_all_videos(data))
+        accessible = get_accessible_categories(data, user_id)
+        count = sum(len(v) for v in accessible.values())
 
     await send_category(update, context, category, count)
     context.user_data.pop("category", None)
@@ -376,6 +597,9 @@ async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_id = update.effective_user.id
     category = context.user_data["category"]
+    data = load_data()
+
+    max_per_request = get_max_per_request(data, user_id)
 
     # --- Range input: "8-15" ---
     if "-" in text:
@@ -396,13 +620,15 @@ async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"❌ Invalid range! {start_idx} > {end_idx}. Pehle chhota number phir bada. Example: `8-15`", parse_mode="Markdown")
                 return
 
-            data = load_data()
             all_vids = get_all_videos(data)
 
             if category in data["categories"]:
                 cat_ids = data["categories"][category]
             elif category in ("🎲 Random", "🆕 Latest", "🔥 Surprise"):
-                cat_ids = all_vids
+                accessible = get_accessible_categories(data, user_id)
+                cat_ids = []
+                for ids_list in accessible.values():
+                    cat_ids.extend(ids_list)
             else:
                 cat_ids = []
 
@@ -417,7 +643,8 @@ async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Rate limit check
             allowed, remaining = check_daily_limit(data, user_id, count)
             if allowed == 0 and not is_admin(user_id):
-                await update.message.reply_text(f"🚦 Aaj ka daily limit ({DAILY_LIMIT}) khatam! Kal aana 😊")
+                daily_limit = get_daily_limit(data, user_id)
+                await update.message.reply_text(f"🚦 Aaj ka daily limit ({daily_limit}) khatam! Kal aana 😊")
                 return
 
             if allowed < count and not is_admin(user_id):
@@ -457,22 +684,25 @@ async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ 1 ya usse zyada number bhejo.")
         return
 
-    # Max per request cap (not for admins)
-    if not is_admin(user_id) and count > MAX_PER_REQUEST:
-        await update.message.reply_text(f"⚠️ Ek baar mein max {MAX_PER_REQUEST} files bhej sakta hoon. {MAX_PER_REQUEST} bhej raha hoon.")
-        count = MAX_PER_REQUEST
+    # Max per request cap based on tier
+    if count > max_per_request:
+        tier_name = get_user_tier_text(data, user_id)
+        await update.message.reply_text(
+            f"⚠️ {tier_name} — max {max_per_request} files per request.\n"
+            f"{max_per_request} bhej raha hoon."
+        )
+        count = max_per_request
 
     # Rate limit check
-    data = load_data()
     allowed, remaining = check_daily_limit(data, user_id, count)
     if allowed == 0:
-        await update.message.reply_text(f"🚦 Aaj ka daily limit ({DAILY_LIMIT}) khatam! Kal aana 😊")
+        daily_limit = get_daily_limit(data, user_id)
+        await update.message.reply_text(f"🚦 Aaj ka daily limit ({daily_limit}) khatam! Kal aana 😊")
         return
 
     if allowed < count and not is_admin(user_id):
         await update.message.reply_text(f"🚦 Aaj sirf {remaining} files baaki. {allowed} bhej raha hoon.")
         count = allowed
-
 
     category = context.user_data["category"]
     await send_category(update, context, category, count)
@@ -485,13 +715,31 @@ async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def make_direct_cmd(update, context, category):
     context.user_data["category"] = category
     data = load_data()
+    user_id = update.effective_user.id
+
+    # Premium category check
+    if is_premium_category(data, category) and not is_premium(data, user_id):
+        await update.message.reply_text(
+            f"🔒 **{category}** sirf 💎 Premium users ke liye hai!\n\n"
+            "💎 /upgrade se premium benefits dekho!",
+            parse_mode="Markdown"
+        )
+        context.user_data.pop("category", None)
+        return
+
     count = len(data["categories"].get(category, []))
+    max_req = get_max_per_request(data, user_id)
+
+    all_text = ""
+    if is_premium(data, user_id):
+        all_text = "• Ya /all bhejo sab ke liye 🔥\n"
+
     await update.message.reply_text(
         f"📂 **{category}** ({count} files)\n\n"
-        f"Kitni files chahiye?\n"
+        f"Kitni files chahiye? (max {max_req})\n"
         f"• Number bhejo: `5`\n"
         f"• Range bhejo: `8-15`\n"
-        f"• Ya /all bhejo sab ke liye",
+        f"{all_text}",
         parse_mode="Markdown"
     )
 
@@ -500,16 +748,22 @@ async def duo(update, context): await make_direct_cmd(update, context, "Duo")
 async def spicy(update, context): await make_direct_cmd(update, context, "Spicy")
 
 async def random_cmd(update, context):
+    data = load_data()
+    max_req = get_max_per_request(data, update.effective_user.id)
     context.user_data["category"] = "🎲 Random"
-    await update.message.reply_text(f"🎲 Kitni Random files chahiye? Number bhejo (max {MAX_PER_REQUEST})")
+    await update.message.reply_text(f"🎲 Kitni Random files chahiye? Number bhejo (max {max_req})")
 
 async def latest_cmd(update, context):
+    data = load_data()
+    max_req = get_max_per_request(data, update.effective_user.id)
     context.user_data["category"] = "🆕 Latest"
-    await update.message.reply_text(f"🆕 Kitni Latest files chahiye? Number bhejo (max {MAX_PER_REQUEST})")
+    await update.message.reply_text(f"🆕 Kitni Latest files chahiye? Number bhejo (max {max_req})")
 
 async def surprise_cmd(update, context):
+    data = load_data()
+    max_req = get_max_per_request(data, update.effective_user.id)
     context.user_data["category"] = "🔥 Surprise"
-    await update.message.reply_text(f"🔥 Kitni Surprise files chahiye? Number bhejo (max {MAX_PER_REQUEST})")
+    await update.message.reply_text(f"🔥 Kitni Surprise files chahiye? Number bhejo (max {max_req})")
 
 # ======================
 # FAVORITES COMMANDS
@@ -552,20 +806,23 @@ async def show_my_stats(update: Update, context: ContextTypes.DEFAULT_TYPE, from
     fav_cats = stats.get("fav_categories", {})
     top_cat = max(fav_cats, key=fav_cats.get) if fav_cats else "N/A"
 
-    today_remaining = max(0, DAILY_LIMIT - daily)
+    tier = get_user_tier_text(data, int(user_id))
+    daily_limit = get_daily_limit(data, int(user_id))
+    max_req = get_max_per_request(data, int(user_id))
+
     if is_admin(int(user_id)):
         limit_text = "♾️ Unlimited (Admin)"
-        title_text = "📊 **Your Stats** 💎 Admin"
     else:
-        limit_text = f"{today_remaining}/{DAILY_LIMIT}"
-        title_text = "📊 **Your Stats**"
+        today_remaining = max(0, daily_limit - daily)
+        limit_text = f"{today_remaining}/{daily_limit}"
 
     text = (
-        f"{title_text}\n"
+        f"📊 **Your Stats** {tier}\n"
         f"━━━━━━━━━━━━━━━\n"
         f"📨 Total Requests: **{total}**\n"
         f"📅 Today's Usage: **{daily}** files\n"
         f"🚦 Remaining Today: **{limit_text}**\n"
+        f"📤 Max Per Request: **{max_req}**\n"
         f"⭐ Favorites: **{favs}** files\n"
         f"💎 Top Category: **{top_cat}**\n"
         f"━━━━━━━━━━━━━━━"
@@ -599,6 +856,35 @@ async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🧹 {deleted} messages clear ho gayi!\n/start se dobara shuru karo.")
 
 # ======================
+# /search COMMAND
+# ======================
+
+async def search_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Usage: /search <keyword>\nExample: /search solo")
+        return
+
+    query = " ".join(context.args).lower()
+    data = load_data()
+    user_id = update.effective_user.id
+
+    results = []
+    for cat, ids in data["categories"].items():
+        if query in cat.lower():
+            locked = is_premium_category(data, cat) and not is_premium(data, user_id)
+            if locked:
+                results.append(f"🔒 {cat} ({len(ids)} files) — Premium Only")
+            else:
+                results.append(f"📂 {cat} ({len(ids)} files)")
+
+    if not results:
+        await update.message.reply_text(f"❌ \"{query}\" se match koi category nahi mili.")
+        return
+
+    text = f"🔍 **Search Results for \"{query}\":**\n\n" + "\n".join(results)
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+# ======================
 # /help COMMAND
 # ======================
 
@@ -614,13 +900,15 @@ HELP_TEXT = """
 /random — Random files
 /latest — Latest files
 /surprise — Surprise pick!
+/search — 🔍 Category search karo
 
 **⭐ Favorites:**
 /favorites — Saved favorites
 /clearfavs — Clear favorites
 
-**📊 Stats:**
+**📊 Stats & Info:**
 /mystats — Your usage stats
+/upgrade — 💎 Premium benefits dekho
 
 **🔧 Other:**
 /clear — Bhejji files chat se delete karo
@@ -629,10 +917,17 @@ HELP_TEXT = """
 ━━━━━━━━━━━━━━━━━━━
 """
 
+PREMIUM_HELP_TEXT = """
+💎 **Premium Commands:**
+━━━━━━━━━━━━━━━━━━━
+/all — 🔥 Sab files ek sath bhejo
+━━━━━━━━━━━━━━━━━━━
+"""
+
 ADMIN_HELP_TEXT = """
 👑 **Admin Commands:**
 ━━━━━━━━━━━━━━━━━━━
-/all — 💎 Sab files bhejo (admin only)
+/all — 🔥 Sab files bhejo
 /add `<category>` `<id1>` `<id2>` ... — Add video IDs
 /addrange `<category>` `<start>` `<end>` — Add range of IDs
 /remove `<category>` `<id>` — Remove a video ID
@@ -640,12 +935,20 @@ ADMIN_HELP_TEXT = """
 /removecategory `<name>` — Category delete karo
 /botstats — Bot statistics
 /broadcast `<message>` — Sabko message bhejo
+/togglepremium `<category>` — Make category premium/free
+/addpremium `<user_id>` — Premium access do
+/removepremium `<user_id>` — Premium hatao
+/listpremium — Premium users dekho
 ━━━━━━━━━━━━━━━━━━━
 """
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    user_id = update.effective_user.id
     text = HELP_TEXT
-    if is_admin(update.effective_user.id):
+    if is_premium(data, user_id) and not is_admin(user_id):
+        text += PREMIUM_HELP_TEXT
+    if is_admin(user_id):
         text += ADMIN_HELP_TEXT
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -772,7 +1075,7 @@ async def addcategory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     args = context.args
     if len(args) != 1:
-        await update.message.reply_text("Usage: /addcategory <name>\nExample: /addcategory Threesome")
+        await update.message.reply_text("Usage: /addcategory <name>\nExample: /addcategory Threesome\n\n💡 Tip: naam mein 'Premium' rakhoge to vo premium-only category ban jayegi!")
         return
 
     name = args[0]
@@ -784,7 +1087,46 @@ async def addcategory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data["categories"][name] = []
     save_data(data)
-    await update.message.reply_text(f"✅ Category **{name}** created!\n\nAb videos add karo: /add {name} <id1> <id2> ...", parse_mode="Markdown")
+
+    premium_note = ""
+    if is_premium_category(data, name):
+        premium_note = "\n🔒 Ye premium-only category hai — sirf premium users access kar payenge!"
+
+    await update.message.reply_text(
+        f"✅ Category **{name}** created!{premium_note}\n\n"
+        f"Ab videos add karo: /add {name} <id1> <id2> ...",
+        parse_mode="Markdown"
+    )
+
+# /togglepremium Solo
+async def togglepremium_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await admin_check(update):
+        return
+
+    args = context.args
+    if len(args) != 1:
+        await update.message.reply_text("Usage: /togglepremium <category>\nExample: /togglepremium Solo")
+        return
+
+    name = args[0]
+    data = load_data()
+
+    if name not in data["categories"]:
+        await update.message.reply_text(f"❌ Category '{name}' nahi mili.")
+        return
+
+    if "premium_categories" not in data:
+        data["premium_categories"] = []
+
+    if name in data["premium_categories"]:
+        data["premium_categories"].remove(name)
+        status = "🆓 FREE"
+    else:
+        data["premium_categories"].append(name)
+        status = "💎 PREMIUM (Locked for free users)"
+
+    save_data(data)
+    await update.message.reply_text(f"✅ Category **{name}** is now **{status}**!", parse_mode="Markdown")
 
 # /removecategory OldCategory
 async def removecategory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -808,6 +1150,177 @@ async def removecategory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     save_data(data)
     await update.message.reply_text(f"🗑️ Category **{name}** deleted! ({count} videos the)", parse_mode="Markdown")
 
+# =============================
+# PREMIUM MANAGEMENT (Admin)
+# =============================
+
+# /addpremium 123456789
+async def addpremium_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await admin_check(update):
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /addpremium <user_id>\nExample: /addpremium 123456789")
+        return
+
+    data = load_data()
+    if "premium_users" not in data:
+        data["premium_users"] = []
+
+    added = 0
+    already = 0
+    invalid = 0
+    for arg in context.args:
+        try:
+            uid = int(arg)
+            if uid in data["premium_users"]:
+                already += 1
+            else:
+                data["premium_users"].append(uid)
+                added += 1
+
+                # Notify the user they got premium
+                try:
+                    await context.bot.send_message(
+                        chat_id=uid,
+                        text=(
+                            "🎉🎉🎉\n\n"
+                            "**💎 Congratulations! You're now a Premium user!**\n\n"
+                            "Ab tumhe milega:\n"
+                            f"• 📤 Unlimited files per request\n"
+                            f"• 📅 Unlimited daily access\n"
+                            "• 🔓 Premium exclusive categories\n"
+                            "• ✅ /all command access\n\n"
+                            "Enjoy! /start se shuru karo 🚀"
+                        ),
+                        parse_mode="Markdown"
+                    )
+                except Exception:
+                    pass  # User may have not started the bot yet
+        except ValueError:
+            invalid += 1
+
+    save_data(data)
+
+    text = f"✅ Premium updated!\n• Added: {added}\n• Already premium: {already}"
+    if invalid:
+        text += f"\n• Invalid IDs: {invalid}"
+    await update.message.reply_text(text)
+
+# /removepremium 123456789
+async def removepremium_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await admin_check(update):
+        return
+
+    if not context.args:
+        await update.message.reply_text("Usage: /removepremium <user_id>")
+        return
+
+    data = load_data()
+    if "premium_users" not in data:
+        data["premium_users"] = []
+
+    removed = 0
+    not_found = 0
+    for arg in context.args:
+        try:
+            uid = int(arg)
+            if uid in data["premium_users"]:
+                data["premium_users"].remove(uid)
+                removed += 1
+
+                # Notify user
+                try:
+                    await context.bot.send_message(
+                        chat_id=uid,
+                        text="⚠️ Tumhara Premium access expire ho gaya hai.\n\n💎 Renew karne ke liye admin se contact karo!"
+                    )
+                except Exception:
+                    pass
+            else:
+                not_found += 1
+        except ValueError:
+            pass
+
+    save_data(data)
+    await update.message.reply_text(f"✅ Removed: {removed}\n❌ Not found: {not_found}")
+
+# /listpremium
+async def listpremium_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await admin_check(update):
+        return
+
+    data = load_data()
+    premium = data.get("premium_users", [])
+
+    if not premium:
+        await update.message.reply_text("💎 Koi premium users nahi hain abhi.")
+        return
+
+    lines = [f"💎 **Premium Users ({len(premium)}):**\n"]
+    for i, uid in enumerate(premium, 1):
+        stats = data["user_stats"].get(str(uid), {})
+        total_req = stats.get("total_requests", 0)
+        lines.append(f"{i}. `{uid}` — {total_req} requests")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+# =============================
+# /publish — NOTIFY NEW CONTENT
+# =============================
+
+async def publish_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await admin_check(update):
+        return
+
+    data = load_data()
+
+    # Build content summary
+    cat_summary = ""
+    total_files = 0
+    for cat, ids in data["categories"].items():
+        total_files += len(ids)
+        premium_tag = " 💎" if is_premium_category(data, cat) else ""
+        cat_summary += f"  📂 {cat}{premium_tag}: {len(ids)} files\n"
+
+    # Custom message from admin (optional)
+    custom_msg = ""
+    if context.args:
+        custom_msg = "\n\n📝 " + " ".join(context.args)
+
+    announcement = (
+        "🚀🔥 **New Content Update!** 🔥🚀\n"
+        "━━━━━━━━━━━━━━━━━━━\n\n"
+        f"🎬 **{total_files} Total Files Available!**\n\n"
+        f"**Categories:**\n{cat_summary}\n"
+        "━━━━━━━━━━━━━━━━━━━"
+        f"{custom_msg}\n\n"
+        "👉 /start se browse karo!\n"
+        "💎 Premium categories ke liye /upgrade dekho!"
+    )
+
+    users = data.get("known_users", [])
+    sent = 0
+    failed = 0
+
+    for uid in users:
+        try:
+            await context.bot.send_message(
+                chat_id=uid,
+                text=announcement,
+                parse_mode="Markdown"
+            )
+            sent += 1
+        except Exception:
+            failed += 1
+
+    await update.message.reply_text(
+        f"📢 **Publish Done!**\n"
+        f"✅ Sent: {sent}\n"
+        f"❌ Failed: {failed}",
+        parse_mode="Markdown"
+    )
+
 # /botstats
 async def botstats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await admin_check(update):
@@ -817,17 +1330,21 @@ async def botstats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_users = len(data.get("known_users", []))
     total_videos = len(get_all_videos(data))
     total_cats = len(data["categories"])
+    total_premium = len(data.get("premium_users", []))
 
     total_requests = sum(s.get("total_requests", 0) for s in data["user_stats"].values())
 
     cat_info = ""
     for cat, ids in data["categories"].items():
-        cat_info += f"  📂 {cat}: {len(ids)} videos\n"
+        premium_tag = " 💎" if is_premium_category(data, cat) else ""
+        cat_info += f"  📂 {cat}{premium_tag}: {len(ids)} videos\n"
 
     text = (
         f"👑 **Bot Statistics**\n"
         f"━━━━━━━━━━━━━━━━━\n"
         f"👥 Total Users: **{total_users}**\n"
+        f"💎 Premium Users: **{total_premium}**\n"
+        f"🆓 Free Users: **{total_users - total_premium}**\n"
         f"🎬 Total Videos: **{total_videos}**\n"
         f"📁 Categories: **{total_cats}**\n"
         f"📨 Total Requests: **{total_requests}**\n"
@@ -889,15 +1406,22 @@ app_bot.add_handler(CommandHandler("clearfavs", clearfavs))
 app_bot.add_handler(CommandHandler("mystats", mystats))
 app_bot.add_handler(CommandHandler("clear", clear))
 app_bot.add_handler(CommandHandler("help", help_cmd))
+app_bot.add_handler(CommandHandler("upgrade", upgrade_cmd))
+app_bot.add_handler(CommandHandler("search", search_cmd))
 
 # Admin commands
 app_bot.add_handler(CommandHandler("add", add_cmd))
 app_bot.add_handler(CommandHandler("addrange", addrange_cmd))
 app_bot.add_handler(CommandHandler("remove", remove_cmd))
+app_bot.add_handler(CommandHandler("togglepremium", togglepremium_cmd))
 app_bot.add_handler(CommandHandler("addcategory", addcategory_cmd))
 app_bot.add_handler(CommandHandler("removecategory", removecategory_cmd))
 app_bot.add_handler(CommandHandler("botstats", botstats_cmd))
 app_bot.add_handler(CommandHandler("broadcast", broadcast_cmd))
+app_bot.add_handler(CommandHandler("publish", publish_cmd))
+app_bot.add_handler(CommandHandler("addpremium", addpremium_cmd))
+app_bot.add_handler(CommandHandler("removepremium", removepremium_cmd))
+app_bot.add_handler(CommandHandler("listpremium", listpremium_cmd))
 
 # Button & text handlers
 app_bot.add_handler(CallbackQueryHandler(button_handler))
