@@ -41,9 +41,26 @@ FREE_DAILY_LIMIT = 50             # Free users: 50 files/day
 # DATA HELPERS
 # ======================
 
+DEFAULT_DATA = {
+    "categories": {},
+    "favorites": {},
+    "user_stats": {},
+    "premium_users": [],
+    "premium_categories": [],
+    "known_users": []
+}
+
 def load_data():
+    if not os.path.exists(DATA_FILE):
+        save_data(DEFAULT_DATA)
+        return DEFAULT_DATA.copy()
     with open(DATA_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    # Ensure all keys exist (for old data.json files)
+    for key, val in DEFAULT_DATA.items():
+        if key not in data:
+            data[key] = val
+    return data
 
 def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
