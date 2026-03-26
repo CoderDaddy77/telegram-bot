@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Downloader – Vera Media Tools</title>
+  <meta name="description" content="Download videos from YouTube, Instagram, Twitter/X and 1000+ sites. Choose resolution, see file size, download MP4 or MP3. Free, no signup." />
+  <meta name="keywords" content="video downloader, youtube downloader, download mp4, free video download" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="/downloader" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-brand">
+        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">Vera Media Tools</span>
+      </a>
+      <nav class="site-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/downloader" class="nav-link active">Video Downloader</a>
+        <a href="/mp3" class="nav-link">Video to MP3</a>
+        <a href="/convert" class="nav-link">WAV → MP3</a>
+        <a href="/compressor" class="nav-link">Image Compressor</a>
+        <a href="/compressor/video" class="nav-link">Video Compressor</a>
+        <a href="/about" class="nav-link">About</a>
+      </nav>
+      <div id="status-indicator" class="status-indicator" title="Server status">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-label" id="status-label">Checking…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">All-in-one Media Tools</p>
+      <h1>Video Downloader</h1>
+      <p class="subcopy">
+        Paste a link, pick quality, see the file size, and download video instantly from YouTube, Instagram, Twitter/X and 1000+ sites.
+      </p>
+    </section>
+
+    <section class="panel">
+      <form id="download-form" class="download-form">
+        <label for="video-url">Video URL</label>
+        <div class="input-row">
+          <input id="video-url" name="video-url" type="url" placeholder="https://www.youtube.com/watch?v=..."
+            required />
+          <button type="submit" id="fetch-button">Fetch</button>
+        </div>
+
+        <div class="controls">
+          <div class="control">
+            <label for="resolution">Resolution</label>
+            <select id="resolution" disabled>
+              <option>Fetch a link first</option>
+            </select>
+          </div>
+          <button type="button" id="direct-link-button" class="secondary" disabled>
+            Direct Link
+          </button>
+          <button type="button" id="download-button" class="accent" disabled>
+            Download Video
+          </button>
+        </div>
+      </form>
+
+      <p id="status" class="status">Ready when you are.</p>
+
+      <div id="progress-container" class="progress-container hidden">
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <p id="progress-text" class="progress-text">Loading...</p>
+      </div>
+
+      <article id="preview-card" class="preview-card hidden">
+        <img id="thumbnail" alt="Video thumbnail" />
+        <div class="preview-meta">
+          <p id="video-title" class="video-title"></p>
+          <p id="video-author" class="video-author"></p>
+          <p id="video-filesize" class="video-filesize"></p>
+          <a id="video-source" target="_blank" rel="noreferrer">Open source link</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="note-grid">
+      <article>
+        <h2>How it works</h2>
+        <p>
+          The server reads stream metadata with <code>yt_dlp</code>, lets you
+          choose an available resolution, then downloads a direct file for
+          your browser.
+        </p>
+      </article>
+      <article>
+        <h2>Supported sites</h2>
+        <p>
+          YouTube, Instagram, Vimeo, Dailymotion, Twitter/X and
+          1000+ more sites supported by yt-dlp.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+  </footer>
+
+  <script src="/app.js"></script>
+  <script src="/status.js"></script>
+  <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
+</body>
+
+</html>

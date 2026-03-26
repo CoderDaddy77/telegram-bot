@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Compressor – Vera Media Tools</title>
+  <meta name="description" content="Compress PNG and JPEG images to a target file size in KB. Free, instant, no signup. Control quality vs file size." />
+  <meta name="keywords" content="image compressor, compress image online, reduce image size kb, jpeg compressor, png compressor, free image compression" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="/compressor" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-brand">
+        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">Vera Media Tools</span>
+      </a>
+      <nav class="site-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/downloader" class="nav-link">Video Downloader</a>
+        <a href="/mp3" class="nav-link">Video to MP3</a>
+        <a href="/convert" class="nav-link">WAV → MP3</a>
+        <a href="/compressor" class="nav-link active">Image Compressor</a>
+        <a href="/compressor/video" class="nav-link">Video Compressor</a>
+        <a href="/about" class="nav-link">About</a>
+      </nav>
+      <div id="status-indicator" class="status-indicator" title="Server status">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-label" id="status-label">Checking…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">All-in-one Media Tools</p>
+      <h1>Image Compressor</h1>
+      <p class="subcopy">
+        Drop an image and set a target file size in KB. We'll dial quality up or down automatically to hit your target — no visible loss at high targets.
+      </p>
+    </section>
+
+    <section class="panel">
+      <!-- Drop Zone -->
+      <div id="comp-drop-zone" class="drop-zone">
+        <p class="drop-label">Drag your image here</p>
+        <p class="drop-sublabel">PNG, JPEG, WEBP — or click to browse</p>
+        <input type="file" id="comp-input" accept="image/png,image/jpeg,image/webp,image/jpg" hidden />
+      </div>
+
+      <!-- File info shown after upload -->
+      <div id="comp-file-info" class="convert-info hidden">
+        <p id="comp-filename" class="convert-filename"></p>
+        <p id="comp-original-size" class="convert-filesize"></p>
+        <p id="comp-original-dims" class="convert-filesize"></p>
+        <button type="button" id="comp-change-btn" class="secondary" style="margin-top:10px;max-width:180px;">
+          Upload Another
+        </button>
+      </div>
+
+      <!-- Controls -->
+      <div id="comp-controls" class="hidden" style="margin-top:18px;">
+        <div class="comp-mode-tabs" id="comp-mode-tabs">
+          <button class="comp-tab active" data-mode="target" id="tab-target">Target Size (KB)</button>
+          <button class="comp-tab" data-mode="quality" id="tab-quality">Manual Quality</button>
+        </div>
+
+        <!-- Target KB mode -->
+        <div id="comp-target-mode" class="comp-mode-panel">
+          <div class="comp-kb-row">
+            <div class="control">
+              <label for="comp-target-kb">Target File Size</label>
+              <div class="kb-input-row">
+                <input type="number" id="comp-target-kb" min="1" max="50000" placeholder="e.g. 200" />
+                <span class="kb-unit">KB</span>
+              </div>
+            </div>
+            <div class="comp-kb-presets">
+              <p class="comp-presets-label">Quick presets</p>
+              <div class="comp-preset-btns">
+                <button type="button" class="comp-preset" data-kb="50">50 KB</button>
+                <button type="button" class="comp-preset" data-kb="100">100 KB</button>
+                <button type="button" class="comp-preset" data-kb="200">200 KB</button>
+                <button type="button" class="comp-preset" data-kb="500">500 KB</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual quality mode -->
+        <div id="comp-quality-mode" class="comp-mode-panel hidden">
+          <div class="control" style="max-width:320px; margin-top:16px;">
+            <label for="comp-quality-slider">Quality: <span id="comp-quality-val">80</span>%</label>
+            <input type="range" id="comp-quality-slider" min="1" max="100" value="80" style="padding:0; border:none; background:none;" />
+          </div>
+        </div>
+
+        <div class="controls" style="margin-top:18px;">
+          <div class="control" style="flex:0 1 auto; min-width:160px;">
+            <label for="comp-format">Output Format</label>
+            <select id="comp-format">
+              <option value="jpeg" selected>JPEG</option>
+              <option value="webp">WebP</option>
+              <option value="png">PNG (lossless)</option>
+            </select>
+          </div>
+          <button type="button" id="comp-btn" class="accent">
+            🗜️ Compress & Download
+          </button>
+        </div>
+      </div>
+
+      <p id="comp-status" class="status">Select an image to begin.</p>
+
+      <!-- Result comparison -->
+      <div id="comp-result" class="comp-result hidden">
+        <div class="comp-result-grid">
+          <div class="comp-result-box">
+            <p class="comp-result-label">Original</p>
+            <img id="comp-preview-original" class="comp-preview-img" alt="Original" />
+            <p id="comp-result-original-size" class="comp-size-badge"></p>
+          </div>
+          <div class="comp-result-box">
+            <p class="comp-result-label">Compressed</p>
+            <img id="comp-preview-output" class="comp-preview-img" alt="Compressed" />
+            <p id="comp-result-output-size" class="comp-size-badge comp-size-badge--green"></p>
+          </div>
+        </div>
+        <div class="comp-savings">
+          <span id="comp-savings-text"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="note-grid">
+      <article>
+        <h2>How target KB works</h2>
+        <p>
+          We run a binary search on quality from 1–100 to find the setting that hits your target size as closely as possible — usually within 5%.
+        </p>
+      </article>
+      <article>
+        <h2>PNG note</h2>
+        <p>
+          PNG is lossless — it can't be quality-compressed. Switch to JPEG or WebP for maximum size reduction.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+  </footer>
+
+  <script src="/compressor.js"></script>
+  <script src="/status.js"></script>
+  <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
+</body>
+
+</html>

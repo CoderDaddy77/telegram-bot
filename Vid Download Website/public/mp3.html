@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video to MP3 Converter – Vera Media Tools</title>
+  <meta name="description" content="Extract MP3 audio from any video URL — YouTube, Instagram, Twitter/X and more. Free, fast, no signup required." />
+  <meta name="keywords" content="video to mp3, youtube to mp3, extract audio, mp3 downloader, free mp3 converter" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="/mp3" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-brand">
+        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">Vera Media Tools</span>
+      </a>
+      <nav class="site-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/downloader" class="nav-link">Video Downloader</a>
+        <a href="/mp3" class="nav-link active">Video to MP3</a>
+        <a href="/convert" class="nav-link">WAV → MP3</a>
+        <a href="/compressor" class="nav-link">Image Compressor</a>
+        <a href="/compressor/video" class="nav-link">Video Compressor</a>
+        <a href="/about" class="nav-link">About</a>
+      </nav>
+      <div id="status-indicator" class="status-indicator" title="Server status">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-label" id="status-label">Checking…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">All-in-one Media Tools</p>
+      <h1>Video to MP3</h1>
+      <p class="subcopy">
+        Paste any video URL and extract high-quality MP3 audio instantly. Works with YouTube, Instagram, Twitter/X and thousands more.
+      </p>
+    </section>
+
+    <section class="panel">
+      <form id="mp3-form" class="download-form">
+        <label for="mp3-url">Video URL</label>
+        <div class="input-row">
+          <input id="mp3-url" name="mp3-url" type="url" placeholder="https://www.youtube.com/watch?v=..."
+            required />
+          <button type="submit" id="mp3-fetch-button">Fetch</button>
+        </div>
+      </form>
+
+      <div id="mp3-meta" class="mp3-meta hidden">
+        <article id="mp3-preview-card" class="preview-card">
+          <img id="mp3-thumbnail" alt="Video thumbnail" />
+          <div class="preview-meta">
+            <p id="mp3-video-title" class="video-title"></p>
+            <p id="mp3-video-author" class="video-author"></p>
+          </div>
+        </article>
+      </div>
+
+      <div id="mp3-download-row" class="mp3-download-row hidden">
+        <button type="button" id="mp3-download-button" class="accent">
+          🎵 Download MP3
+        </button>
+      </div>
+
+      <p id="mp3-status" class="status">Paste a video URL to get started.</p>
+
+      <div id="mp3-progress-container" class="progress-container hidden">
+        <div class="progress-track">
+          <div id="mp3-progress-fill" class="progress-fill"></div>
+        </div>
+        <p id="mp3-progress-text" class="progress-text">0%</p>
+      </div>
+    </section>
+
+    <section class="note-grid">
+      <article>
+        <h2>How it works</h2>
+        <p>
+          The server uses <code>yt-dlp</code> to extract the best audio stream
+          and <code>FFmpeg</code> to encode it as high-quality MP3.
+        </p>
+      </article>
+      <article>
+        <h2>Supported sites</h2>
+        <p>
+          YouTube, Instagram, Vimeo, Twitter/X, SoundCloud, Dailymotion and
+          1000+ more sites.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+  </footer>
+
+  <script src="/mp3.js"></script>
+  <script src="/status.js"></script>
+  <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
+</body>
+
+</html>

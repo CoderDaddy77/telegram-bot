@@ -1,0 +1,7 @@
+node_modules/
+downloads/
+uploads/
+*.log
+.vscode/
+debug_*.py
+debug_*.txt

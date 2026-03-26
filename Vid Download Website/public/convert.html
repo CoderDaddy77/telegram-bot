@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WAV to MP3 Converter – Vera Media Tools</title>
+  <meta name="description" content="Convert WAV audio files to MP3 for free. Drag and drop, instant conversion, custom bitrate. No signup required." />
+  <meta name="keywords" content="wav to mp3, convert wav, audio converter, free audio converter, mp3 converter online" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="/convert" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-brand">
+        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">Vera Media Tools</span>
+      </a>
+      <nav class="site-nav">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/downloader" class="nav-link">Video Downloader</a>
+        <a href="/mp3" class="nav-link">Video to MP3</a>
+        <a href="/convert" class="nav-link active">WAV → MP3</a>
+        <a href="/compressor" class="nav-link">Image Compressor</a>
+        <a href="/compressor/video" class="nav-link">Video Compressor</a>
+        <a href="/about" class="nav-link">About</a>
+      </nav>
+      <div id="status-indicator" class="status-indicator" title="Server status">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-label" id="status-label">Checking…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">All-in-one Media Tools</p>
+      <h1>WAV → MP3</h1>
+      <p class="subcopy">
+        Drop your WAV file or click to upload. We'll convert it to MP3 right away.
+      </p>
+    </section>
+
+    <section class="panel convert-panel">
+      <!-- Drop zone — hidden after file is selected -->
+      <div id="drop-zone" class="drop-zone">
+        <p class="drop-label">Drag your .wav file here</p>
+        <p class="drop-sublabel">or click to browse</p>
+        <input type="file" id="wav-input" accept=".wav,audio/wav" hidden />
+      </div>
+
+      <!-- File info — shown after file is loaded -->
+      <div id="convert-info" class="convert-info hidden">
+        <p id="convert-filename" class="convert-filename"></p>
+        <p id="convert-filesize" class="convert-filesize"></p>
+        <button type="button" id="convert-change-btn" class="secondary" style="margin-top:10px;max-width:180px;">
+          Upload Another
+        </button>
+      </div>
+
+      <div class="controls convert-controls">
+        <div class="control">
+          <label for="mp3-bitrate">MP3 Bitrate</label>
+          <select id="mp3-bitrate">
+            <option value="128">128 kbps</option>
+            <option value="192">192 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="320" selected>320 kbps (Best)</option>
+          </select>
+        </div>
+        <button type="button" id="convert-button" class="accent" disabled>
+          Convert to MP3
+        </button>
+      </div>
+
+      <p id="convert-status" class="status">Select a WAV file to begin.</p>
+
+      <div id="convert-progress-container" class="progress-container hidden">
+        <div class="progress-track">
+          <div id="convert-progress-fill" class="progress-fill"></div>
+        </div>
+        <p id="convert-progress-text" class="progress-text">0%</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+  </footer>
+
+  <script src="/convert.js"></script>
+  <script src="/status.js"></script>
+</body>
+
+</html>
