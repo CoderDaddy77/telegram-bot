@@ -33,8 +33,8 @@ DATA_FILE = "data.json"
 PAGE_SIZE = 5
 
 # --- Free vs Premium Limits ---
-FREE_MAX_PER_REQUEST = 5          # Free users: max 5 files per request
-FREE_DAILY_LIMIT = 50             # Free users: 50 files/day
+FREE_DAILY_LIMIT = 30             # Free users: 30 files/day
+FREE_MAX_PER_REQUEST = 30         # Allow up to limit per request so pagination works
 # Premium + Admin = UNLIMITED (no cap)
 
 # ======================
@@ -206,6 +206,13 @@ async def send_page(update, context, msg_ids, page, category, send_all=False):
         page_ids = msg_ids[start:end]
 
     chat_id = update.effective_chat.id
+    user_id = str(update.effective_user.id)
+    
+    try:
+        data = load_data()
+        favs = data.get("favorites", {}).get(user_id, [])
+    except:
+        favs = []
 
     # Track sent message IDs for /clear
     if "sent_messages" not in context.user_data:
@@ -214,10 +221,18 @@ async def send_page(update, context, msg_ids, page, category, send_all=False):
     # Send files first
     for msg_id in page_ids:
         try:
-            fwd = await context.bot.forward_message(
+            # Inline button for specific message
+            is_fav = msg_id in favs
+            btn_text = "❌ Remove Favorite" if is_fav else "⭐ Save to Favorites"
+            btn_data = f"unfav_{msg_id}" if is_fav else f"fav_{msg_id}"
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton(btn_text, callback_data=btn_data)]])
+            
+            # Using copy_message instead of forward so we can attach custom keyboard
+            fwd = await context.bot.copy_message(
                 chat_id=chat_id,
                 from_chat_id=CHANNEL_ID,
-                message_id=msg_id
+                message_id=msg_id,
+                reply_markup=kb
             )
             context.user_data["sent_messages"].append(fwd.message_id)
             if send_all and len(page_ids) > 5:
@@ -234,17 +249,21 @@ async def send_page(update, context, msg_ids, page, category, send_all=False):
         buttons.append(InlineKeyboardButton(f"📄 {page+1}/{total_pages}", callback_data="noop"))
         if page < total_pages - 1:
             buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"page_{category}_{page+1}"))
-        keyboard.append(buttons)
-
-    # Add save to favorites button
-    keyboard.append([InlineKeyboardButton("⭐ Save All to Favorites", callback_data=f"savepage_{start}_{end}_{category}")])
+        if buttons:
+            keyboard.append(buttons)
 
     # Send info + buttons AFTER the files
-    info_msg = await context.bot.send_message(
-        chat_id=chat_id,
-        text=f"✅ Sent {len(page_ids)} files ({start+1}-{end} of {total})",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    if keyboard:
+        info_msg = await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"✅ Sent {len(page_ids)} files ({start+1}-{end} of {total})",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    else:
+        info_msg = await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"✅ Sent {len(page_ids)} files (All)"
+        )
     context.user_data["sent_messages"].append(info_msg.message_id)
 
 async def send_category(update, context, category, count, send_all=False):
@@ -314,16 +333,16 @@ async def send_category(update, context, category, count, send_all=False):
 
 WELCOME_FREE = """
 ╔══════════════════════════════╗
-║    🤖 SmartBot — Free Tier    ║
+║    🤖 SmartBot — Free Tier   
 ╠══════════════════════════════╣
-║                              ║
-║  🎬 Content Collection       ║
-║  ⚡ Fast & Reliable          ║
-║  ⭐ Save Favorites           ║
-║  📊 Track Your Stats         ║
-║                              ║
-║  💎 /upgrade for Premium!    ║
-║                              ║
+║                              
+║  🎬 Content Collection       
+║  ⚡ Fast & Reliable          
+║  ⭐ Save Favorites           
+║  📊 Track Your Stats         
+║                              
+║  💎 /upgrade for Premium!    
+║                              
 ╚══════════════════════════════╝
 
 👇 Category choose karo:
@@ -331,16 +350,16 @@ WELCOME_FREE = """
 
 WELCOME_PREMIUM = """
 ╔══════════════════════════════╗
-║  🤖 SmartBot — 💎 Premium    ║
+║  🤖 SmartBot — 💎 Premium   
 ╠══════════════════════════════╣
-║                              ║
-║  🎬 ALL Content Unlocked     ║
-║  ⚡ Fast & Reliable          ║
-║  📤 10 Files Per Request     ║
-║  🔓 /all Command Access      ║
-║  ⭐ Save Favorites           ║
-║  📊 Track Your Stats         ║
-║                              ║
+║                              
+║  🎬 ALL Content Unlocked     
+║  ⚡ Fast & Reliable          
+║  📤 10 Files Per Request     
+║  🔓 /all Command Access      
+║  ⭐ Save Favorites           
+║  📊 Track Your Stats         
+║                              
 ╚══════════════════════════════╝
 
 👇 Category choose karo:
@@ -348,13 +367,13 @@ WELCOME_PREMIUM = """
 
 WELCOME_ADMIN = """
 ╔══════════════════════════════╗
-║  🤖 SmartBot — 👑 Admin      ║
+║  🤖 SmartBot — 👑 Admin      
 ╠══════════════════════════════╣
-║                              ║
-║  🎬 ALL Content Unlocked     ║
-║  ⚡ Unlimited Access         ║
-║  🔧 Full Admin Controls      ║
-║                              ║
+║                              
+║  🎬 ALL Content Unlocked     
+║  ⚡ Unlimited Access         
+║  🔧 Full Admin Controls      
+║                              
 ╚══════════════════════════════╝
 
 👇 Category choose karo:
@@ -464,9 +483,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             tier_info = f"🆓 Free — Max {max_req} per request\n"
 
-        all_text = ""
-        if is_premium(data, user_id) or is_admin(user_id):
-            all_text = "• Ya /all bhejo sab ke liye 🔥\n"
+        all_text = "• Ya /all bhejo sab ke liye 🔥\n"
 
         await query.message.reply_text(
             f"📂 **{category}** selected ({count} files available)\n"
@@ -490,30 +507,50 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await send_page(update, context, ids, page, category)
         return
 
-    # --- Save page to favorites ---
-    if data_str.startswith("savepage_"):
-        parts = data_str.split("_")
-        if len(parts) >= 4:
-            start_idx = int(parts[1])
-            end_idx = int(parts[2])
-            category = "_".join(parts[3:])
-            ids = context.user_data.get("current_ids", [])
-            page_ids = ids[start_idx:end_idx]
-
+    # --- Add INDIVIDUAL to Favorites ---
+    if data_str.startswith("fav_"):
+        try:
+            msg_id = int(data_str.split("_")[1])
             user_id = str(update.effective_user.id)
             data = load_data()
-
+            
             if user_id not in data["favorites"]:
                 data["favorites"][user_id] = []
+                
+            if msg_id not in data["favorites"][user_id]:
+                data["favorites"][user_id].append(msg_id)
+                save_data(data)
+                
+                # Update button
+                new_btn = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("❌ Remove Favorite", callback_data=f"unfav_{msg_id}")
+                ]])
+                await query.edit_message_reply_markup(reply_markup=new_btn)
+            else:
+                await query.answer("Already in favorites!")
+        except Exception:
+            pass
+        return
 
-            added = 0
-            for mid in page_ids:
-                if mid not in data["favorites"][user_id]:
-                    data["favorites"][user_id].append(mid)
-                    added += 1
-
-            save_data(data)
-            await query.message.reply_text(f"⭐ {added} files favorites mein save ho gayi!")
+    # --- Remove INDIVIDUAL from Favorites ---
+    if data_str.startswith("unfav_"):
+        try:
+            msg_id = int(data_str.split("_")[1])
+            user_id = str(update.effective_user.id)
+            data = load_data()
+            
+            if user_id in data["favorites"] and msg_id in data["favorites"][user_id]:
+                data["favorites"][user_id].remove(msg_id)
+                save_data(data)
+                
+                new_btn = InlineKeyboardMarkup([[
+                    InlineKeyboardButton("⭐ Save to Favorites", callback_data=f"fav_{msg_id}")
+                ]])
+                await query.edit_message_reply_markup(reply_markup=new_btn)
+            else:
+                await query.answer("Not in favorites!")
+        except Exception:
+            pass
         return
 
     # --- Show favorites ---
@@ -715,7 +752,7 @@ async def send_posts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tier_name = get_user_tier_text(data, user_id)
         await update.message.reply_text(
             f"⚠️ {tier_name} — max {max_per_request} files per request.\n"
-            f"{max_per_request} bhej raha hoon."
+            f"{max_per_request} Sending..."
         )
         count = max_per_request
 
@@ -756,9 +793,7 @@ async def make_direct_cmd(update, context, category):
     count = len(data["categories"].get(category, []))
     max_req = get_max_per_request(data, user_id)
 
-    all_text = ""
-    if is_premium(data, user_id):
-        all_text = "• Ya /all bhejo sab ke liye 🔥\n"
+    all_text = "• Ya /all bhejo sab ke liye 🔥\n"
 
     await update.message.reply_text(
         f"📂 **{category}** ({count} files)\n\n"
@@ -959,6 +994,7 @@ ADMIN_HELP_TEXT = """
 /remove `<category>` `<id>` — Remove a video ID
 /addcategory `<name>` — New category banao
 /removecategory `<name>` — Category delete karo
+/export — 📤 JSON Data Copy karo
 /botstats — Bot statistics
 /broadcast `<message>` — Sabko message bhejo
 /togglepremium `<category>` — Make category premium/free
@@ -1404,6 +1440,34 @@ async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(f"📢 Broadcast done!\n✅ Sent: {sent}\n❌ Failed: {failed}")
 
+
+
+async def export_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await admin_check(update):
+        return
+    data = load_data()
+    # Create a nice formatted JSON string just for categories (and maybe premium users)
+    export_data = {
+        "categories": data.get("categories", {}),
+        "premium_categories": data.get("premium_categories", []),
+        "premium_users": data.get("premium_users", [])
+    }
+    json_str = json.dumps(export_data, indent=4)
+    
+    # Send in chunks if it's too long
+    chunk_size = 4000
+    try:
+        if len(json_str) <= chunk_size:
+            await update.message.reply_text(f"📋 **Copy-Paste Data:**\n\n```json\n{json_str}\n```", parse_mode="Markdown")
+        else:
+            await update.message.reply_text("📋 **Copy-Paste Data (Multiple Parts):**")
+            for i in range(0, len(json_str), chunk_size):
+                chunk = json_str[i:i+chunk_size]
+                await update.message.reply_text(f"```json\n{chunk}\n```", parse_mode="Markdown")
+            await update.message.reply_text("✅ Poora data send ho gaya hai. Sabko copy karke merge karlo.")
+    except Exception as e:
+        await update.message.reply_text(f"⚠️ Error sending export: {e}")
+
 # ======================
 # RUN BOT
 # ======================
@@ -1448,6 +1512,7 @@ app_bot.add_handler(CommandHandler("publish", publish_cmd))
 app_bot.add_handler(CommandHandler("addpremium", addpremium_cmd))
 app_bot.add_handler(CommandHandler("removepremium", removepremium_cmd))
 app_bot.add_handler(CommandHandler("listpremium", listpremium_cmd))
+app_bot.add_handler(CommandHandler("export", export_cmd))
 
 # Button & text handlers
 app_bot.add_handler(CallbackQueryHandler(button_handler))
