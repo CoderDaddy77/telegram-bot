@@ -9,7 +9,7 @@ from datetime import datetime, date
 from flask import Flask
 from dotenv import load_dotenv
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MessageOriginChannel
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -431,6 +431,107 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome, reply_markup=reply_markup)
 
 # ======================
+# PREVIEW MODE (CAROUSEL)
+# ======================
+
+async def show_preview_item(update, context, category, index):
+    """Send one file with carousel navigation buttons (Preview Mode)."""
+    query = update.callback_query
+    data = load_data()
+    user_id = update.effective_user.id
+    user_id_str = str(user_id)
+
+    # Premium check
+    if is_premium_category(data, category) and not is_premium(data, user_id):
+        await query.answer("🔒 Premium content! /upgrade se access pao.", show_alert=True)
+        return
+
+    # Resolve IDs for the category
+    if category == "🎲 Random":
+        accessible = get_accessible_categories(data, user_id)
+        ids = []
+        for v in accessible.values():
+            ids.extend(v)
+        # Use a seeded shuffle so Prev/Next is consistent within a session
+        session_ids = context.user_data.get("preview_shuffled_ids", None)
+        if session_ids is None or context.user_data.get("preview_category") != category:
+            random.shuffle(ids)
+            context.user_data["preview_shuffled_ids"] = ids
+            context.user_data["preview_category"] = category
+        else:
+            ids = session_ids
+    elif category == "🆕 Latest":
+        accessible = get_accessible_categories(data, user_id)
+        ids = []
+        for v in accessible.values():
+            ids.extend(v)
+        ids = sorted(ids, reverse=True)
+    elif category == "🔥 Surprise":
+        accessible = get_accessible_categories(data, user_id)
+        cats = list(accessible.keys())
+        if cats:
+            session_cat = context.user_data.get("surprise_cat")
+            if session_cat not in accessible:
+                session_cat = random.choice(cats)
+                context.user_data["surprise_cat"] = session_cat
+            ids = accessible[session_cat]
+        else:
+            ids = []
+    elif category in data["categories"]:
+        ids = data["categories"][category]
+    else:
+        ids = []
+
+    if not ids:
+        await query.answer("❌ Is category mein koi content nahi!", show_alert=True)
+        return
+
+    total = len(ids)
+    index = max(0, min(index, total - 1))
+    msg_id = ids[index]
+
+    # Favorites check
+    favs = data.get("favorites", {}).get(user_id_str, [])
+    is_fav = msg_id in favs
+
+    # --- Build keyboard ---
+    nav_row = []
+    if index > 0:
+        nav_row.append(InlineKeyboardButton("⬅️ Prev", callback_data=f"mp|{category}|{index - 1}"))
+    nav_row.append(InlineKeyboardButton(f"📍 {index + 1}/{total}", callback_data="noop"))
+    if index < total - 1:
+        nav_row.append(InlineKeyboardButton("Next ➡️", callback_data=f"mp|{category}|{index + 1}"))
+
+    fav_text = "❌ Unsave" if is_fav else "⭐ Save"
+    fav_cb = f"unfav_{msg_id}" if is_fav else f"fav_{msg_id}"
+    action_row = [
+        InlineKeyboardButton(fav_text, callback_data=fav_cb),
+        InlineKeyboardButton("❌ Exit", callback_data="exit_preview"),
+    ]
+
+    keyboard = InlineKeyboardMarkup([nav_row, action_row])
+    chat_id = query.message.chat_id
+    old_msg_id = query.message.message_id
+
+    try:
+        await context.bot.copy_message(
+            chat_id=chat_id,
+            from_chat_id=CHANNEL_ID,
+            message_id=msg_id,
+            reply_markup=keyboard,
+        )
+        # Update stats silently
+        track_user(data, user_id)
+        update_user_stats(data, user_id, category, 1)
+        # Delete previous preview card to keep chat clean
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=old_msg_id)
+        except Exception:
+            pass
+    except Exception as e:
+        await query.answer(f"❌ Error: {e}", show_alert=True)
+
+# ======================
 # BUTTON HANDLERS
 # ======================
 
@@ -442,11 +543,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data_str == "noop":
         return
 
-    # --- Category Selection ---
+    # --- Category Selection → Mode Chooser ---
     if data_str.startswith("cat_"):
         category = data_str[4:]
-        context.user_data["category"] = category
-
         data = load_data()
         user_id = update.effective_user.id
 
@@ -463,8 +562,36 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Admin se contact karo premium ke liye! 🚀",
                 parse_mode="Markdown"
             )
-            context.user_data.pop("category", None)
             return
+
+        if category in data["categories"]:
+            count = len(data["categories"][category])
+        else:
+            accessible = get_accessible_categories(data, user_id)
+            count = sum(len(v) for v in accessible.values())
+
+        # Show mode selection
+        mode_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🖼️ Preview Mode", callback_data=f"mp|{category}|0"),
+                InlineKeyboardButton("⚡ Direct Mode", callback_data=f"md|{category}"),
+            ]
+        ])
+        await query.message.reply_text(
+            f"📂 **{category}** — {count} files\n\n"
+            f"🖼️ **Preview** — Ek ek karke dekho, jo pasand aaye save karo\n"
+            f"⚡ **Direct** — Number type karo, seedha files aao",
+            parse_mode="Markdown",
+            reply_markup=mode_keyboard,
+        )
+        return
+
+    # --- Direct Mode: ask for count ---
+    if data_str.startswith("md|"):
+        category = data_str[3:]
+        context.user_data["category"] = category
+        data = load_data()
+        user_id = update.effective_user.id
 
         if category in data["categories"]:
             count = len(data["categories"][category])
@@ -474,7 +601,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         max_req = get_max_per_request(data, user_id)
 
-        # Build instruction text based on tier
         tier_info = ""
         if is_admin(user_id):
             tier_info = "👑 Admin — Unlimited access\n"
@@ -483,17 +609,37 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             tier_info = f"🆓 Free — Max {max_req} per request\n"
 
-        all_text = "• Ya /all bhejo sab ke liye 🔥\n"
-
         await query.message.reply_text(
-            f"📂 **{category}** selected ({count} files available)\n"
+            f"⚡ **Direct Mode — {category}** ({count} files)\n"
             f"{tier_info}\n"
             f"Kitni files chahiye?\n"
             f"• Number bhejo: `5`\n"
             f"• Range bhejo: `8-15`\n"
-            f"{all_text}",
-            parse_mode="Markdown"
+            f"• Ya /all bhejo sab ke liye 🔥",
+            parse_mode="Markdown",
         )
+        return
+
+    # --- Preview Mode: carousel ---
+    if data_str.startswith("mp|"):
+        parts = data_str.split("|", 2)
+        if len(parts) == 3:
+            category = parts[1]
+            index = int(parts[2])
+            await show_preview_item(update, context, category, index)
+        return
+
+    # --- Exit Preview ---
+    if data_str == "exit_preview":
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
+        # Clear preview session data
+        context.user_data.pop("preview_shuffled_ids", None)
+        context.user_data.pop("preview_category", None)
+        context.user_data.pop("surprise_cat", None)
+        await query.answer("Preview mode exit ho gaya! /start se dobara browse karo.", show_alert=False)
         return
 
     # --- Pagination ---
@@ -989,6 +1135,8 @@ ADMIN_HELP_TEXT = """
 👑 **Admin Commands:**
 ━━━━━━━━━━━━━━━━━━━
 /all — 🔥 Sab files bhejo
+/editmode `<category>` — Forward-to-Add mode ON
+/editmode off — Forward-to-Add mode OFF
 /add `<category>` `<id1>` `<id2>` ... — Add video IDs
 /addrange `<category>` `<start>` `<end>` — Add range of IDs
 /remove `<category>` `<id>` — Remove a video ID
@@ -1468,6 +1616,122 @@ async def export_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"⚠️ Error sending export: {e}")
 
+# =============================
+# FORWARD-TO-ADD (ADMIN EDIT MODE)
+# =============================
+
+async def editmode_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Activate Forward-to-Add mode for a category.
+    Usage: /editmode <category name>   →  turn ON
+           /editmode off               →  turn OFF
+    """
+    if not await admin_check(update):
+        return
+
+    args = context.args
+    if not args:
+        current = context.user_data.get("edit_mode_category")
+        if current:
+            await update.message.reply_text(
+                f"⚙️ Edit mode is currently **ON** for: **{current}**\n"
+                f"Forward karo ya `/editmode off` type karo.",
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text(
+                "Usage:\n"
+                "`/editmode <CategoryName>` — mode ON\n"
+                "`/editmode off` — mode OFF\n\n"
+                "Example: `/editmode Solo`",
+                parse_mode="Markdown"
+            )
+        return
+
+    if args[0].lower() == "off":
+        old_cat = context.user_data.pop("edit_mode_category", None)
+        if old_cat:
+            await update.message.reply_text(f"✅ Edit mode OFF. **{old_cat}** ke liye forwarding band.", parse_mode="Markdown")
+        else:
+            await update.message.reply_text("ℹ️ Edit mode already OFF tha.")
+        return
+
+    # Multi-word category names (e.g. /editmode Premium Solo)
+    category = " ".join(args)
+    data = load_data()
+
+    if category not in data["categories"]:
+        cats = "\n".join(f"• `{c}`" for c in data["categories"].keys())
+        await update.message.reply_text(
+            f"❌ Category **{category}** nahi mili.\n\n"
+            f"Available categories:\n{cats}\n\n"
+            f"Nayi banane ke liye: `/addcategory {category}`",
+            parse_mode="Markdown"
+        )
+        return
+
+    context.user_data["edit_mode_category"] = category
+    count = len(data["categories"][category])
+    await update.message.reply_text(
+        f"✅ **Edit Mode ON** — **{category}** ({count} files)\n\n"
+        f"Ab channel se koi bhi video/photo/file yahan forward karo — "
+        f"main automatically ID add kar doonga!\n\n"
+        f"**/editmode off** likhoge to mode band ho jayega.",
+        parse_mode="Markdown"
+    )
+
+
+async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Intercept forwarded messages from admins in Edit Mode and auto-add their IDs."""
+    user_id = update.effective_user.id
+    message = update.message
+
+    # Only process if admin is in edit mode
+    if not is_admin(user_id):
+        return
+    edit_category = context.user_data.get("edit_mode_category")
+    if not edit_category:
+        return
+
+    origin = message.forward_origin
+    if origin is None:
+        return
+
+    # Check that the forward came from the configured channel
+    if not isinstance(origin, MessageOriginChannel):
+        await message.reply_text(
+            "⚠️ Ye message channel se forward nahi hua.\n"
+            f"Sirf **{CHANNEL_ID}** channel se forward karo.",
+            parse_mode="Markdown"
+        )
+        return
+
+    if origin.chat.id != CHANNEL_ID:
+        await message.reply_text(
+            f"⚠️ Wrong channel! Ye ID **{origin.chat.id}** se aaya.\n"
+            f"Tumhara channel ID: `{CHANNEL_ID}`",
+            parse_mode="Markdown"
+        )
+        return
+
+    msg_id = origin.message_id
+    data = load_data()
+
+    if edit_category not in data["categories"]:
+        await message.reply_text(f"❌ Category **{edit_category}** ab exist nahi karta. `/editmode off` karo.", parse_mode="Markdown")
+        return
+
+    if msg_id in data["categories"][edit_category]:
+        await message.reply_text(f"⚠️ ID `{msg_id}` already **{edit_category}** mein hai!", parse_mode="Markdown")
+        return
+
+    data["categories"][edit_category].append(msg_id)
+    save_data(data)
+    total = len(data["categories"][edit_category])
+    await message.reply_text(
+        f"✅ Added `{msg_id}` → **{edit_category}**\n📊 Total: {total} files",
+        parse_mode="Markdown"
+    )
+
 # ======================
 # RUN BOT
 # ======================
@@ -1515,7 +1779,10 @@ app_bot.add_handler(CommandHandler("listpremium", listpremium_cmd))
 app_bot.add_handler(CommandHandler("export", export_cmd))
 
 # Button & text handlers
+app_bot.add_handler(CommandHandler("editmode", editmode_cmd))
 app_bot.add_handler(CallbackQueryHandler(button_handler))
+# Forward-to-Add handler (admin edit mode) — must be before TEXT handler
+app_bot.add_handler(MessageHandler(filters.FORWARDED & ~filters.COMMAND, handle_forward))
 app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_posts))
 
 print("🤖 SmartBot running...")
