@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PPT to PDF Converter – V Media Tools</title>
+  <meta name="description" content="Convert PowerPoint presentations (PPTX) to PDF for free. All processing happens in your browser — your file never leaves your device." />
+  <meta name="keywords" content="ppt to pdf, pptx to pdf, convert powerpoint to pdf, free pptx converter, presentation converter" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="/ppt-to-pdf" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-brand">
+        <img src="/logo.png" alt="V Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">V Media Tools</span>
+      </a>
+      <nav class="site-nav" id="main-nav"></nav>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">File Converter</p>
+      <h1>PPT to PDF</h1>
+      <p class="subcopy">
+        Convert your PowerPoint presentations to PDF — <strong>right in your browser</strong>. Each slide becomes a page. Supports text, shapes, images and basic layouts.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div id="ppt-drop" class="drop-zone">
+        <p class="drop-label">📂 Drag your .pptx file here</p>
+        <p class="drop-sublabel">or click to browse — PowerPoint files (.pptx)</p>
+        <input type="file" id="ppt-input" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" hidden />
+      </div>
+
+      <div id="ppt-file-info" class="convert-info hidden">
+        <p id="ppt-filename" class="convert-filename"></p>
+        <p id="ppt-filesize" class="convert-filesize"></p>
+        <button type="button" id="ppt-change-btn" class="secondary" style="margin-top:10px;max-width:180px;">
+          Upload Another
+        </button>
+      </div>
+
+      <div id="ppt-controls" class="hidden" style="margin-top:18px;">
+        <div class="controls">
+          <button type="button" id="ppt-btn" class="accent">
+            📄 Convert to PDF
+          </button>
+        </div>
+      </div>
+
+      <p id="ppt-status" class="status">Select a PPTX file to begin.</p>
+
+      <div id="ppt-progress-container" class="progress-container hidden">
+        <div class="progress-track">
+          <div id="ppt-progress-fill" class="progress-fill"></div>
+        </div>
+        <p id="ppt-progress-text" class="progress-text">0%</p>
+      </div>
+
+      <!-- Slide previews -->
+      <div id="ppt-slides-preview" class="hidden" style="margin-top:20px;">
+        <p style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); margin:0 0 10px;">Slide Preview</p>
+        <div id="ppt-slides-grid" class="ppt-slides-grid"></div>
+      </div>
+    </section>
+
+    <section class="note-grid">
+      <article>
+        <h2>How it works</h2>
+        <p>
+          We parse the PPTX file <strong>in your browser</strong> using JSZip. Each slide is rendered to a canvas and assembled into a PDF. No server processing.
+        </p>
+      </article>
+      <article>
+        <h2>Limitations</h2>
+        <p>
+          Supports text, basic shapes, images and solid backgrounds. Complex animations, charts, SmartArt and embedded videos are not fully supported.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 V Media Tools &mdash; Free &amp; Open Source</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="/nav.js"></script>
+  <script src="/ppt-to-pdf.js"></script>
+  <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
+</body>
+
+</html>

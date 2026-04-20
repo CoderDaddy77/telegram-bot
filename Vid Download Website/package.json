@@ -1,12 +1,21 @@
 {
-  "name": "vid-download-website",
+  "name": "vera-media-tools",
   "version": "1.0.0",
   "private": true,
-  "description": "Simple video downloader website with resolution selection",
+  "description": "Free media toolkit — WAV to MP3, Video to MP3, Image Compressor, Video Compressor, File Converters. All processing in the browser.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js",
+    "copy-ffmpeg": "node -e \"const fs=require('fs'),p=require('path');const d='public/ffmpeg-wasm';fs.mkdirSync(d,{recursive:true});[['@ffmpeg/ffmpeg','dist/umd/ffmpeg.js','ffmpeg.js'],['@ffmpeg/ffmpeg','dist/umd/814.ffmpeg.js','814.ffmpeg.js'],['@ffmpeg/util','dist/umd/index.js','ffmpeg-util.js'],['@ffmpeg/core','dist/umd/ffmpeg-core.js','ffmpeg-core.js'],['@ffmpeg/core','dist/umd/ffmpeg-core.wasm','ffmpeg-core.wasm']].forEach(([pkg,src,dst])=>{fs.copyFileSync(p.join('node_modules',pkg,src),p.join(d,dst));console.log('copied',dst);})\""
   },
   "dependencies": {
-    "ffmpeg-static": "^5.3.0"
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@ffmpeg/core": "^0.12.6",
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1"
   }
 }

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Images to PDF – V Media Tools</title>
+  <meta name="description" content="Combine multiple images into a single PDF file. Drag and drop, reorder, and download — all free, in your browser. No signup required." />
+  <meta name="keywords" content="images to pdf, jpg to pdf, png to pdf, combine images pdf, free image to pdf converter, browser" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="/images-to-pdf" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-brand">
+        <img src="/logo.png" alt="V Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">V Media Tools</span>
+      </a>
+      <nav class="site-nav" id="main-nav"></nav>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">File Converter</p>
+      <h1>Images to PDF</h1>
+      <p class="subcopy">
+        Drop multiple images, reorder them, and combine into a single PDF — <strong>all in your browser</strong>. Your files never leave your device.
+      </p>
+    </section>
+
+    <section class="panel">
+      <!-- Drop Zone -->
+      <div id="img2pdf-drop" class="drop-zone">
+        <p class="drop-label">📂 Drag your images here</p>
+        <p class="drop-sublabel">PNG, JPEG, WebP — or click to browse (multiple allowed)</p>
+        <input type="file" id="img2pdf-input" accept="image/png,image/jpeg,image/webp,image/jpg,image/bmp" multiple hidden />
+      </div>
+
+      <!-- Image list -->
+      <div id="img2pdf-list" class="img2pdf-list hidden"></div>
+
+      <div id="img2pdf-controls" class="hidden" style="margin-top:18px;">
+        <button type="button" id="img2pdf-add-more" class="secondary" style="max-width:200px; margin-bottom:14px;">
+          ➕ Add More Images
+        </button>
+        <input type="file" id="img2pdf-input-more" accept="image/png,image/jpeg,image/webp,image/jpg,image/bmp" multiple hidden />
+
+        <div class="controls">
+          <div class="control" style="flex:0 1 auto; min-width:160px;">
+            <label for="img2pdf-orientation">Page Size</label>
+            <select id="img2pdf-orientation">
+              <option value="auto" selected>Auto (fit image)</option>
+              <option value="a4-portrait">A4 Portrait</option>
+              <option value="a4-landscape">A4 Landscape</option>
+              <option value="letter-portrait">Letter Portrait</option>
+              <option value="letter-landscape">Letter Landscape</option>
+            </select>
+          </div>
+          <div class="control" style="flex:0 1 auto; min-width:140px;">
+            <label for="img2pdf-margin">Margin</label>
+            <select id="img2pdf-margin">
+              <option value="0">No Margin</option>
+              <option value="10" selected>Small (10px)</option>
+              <option value="20">Medium (20px)</option>
+              <option value="40">Large (40px)</option>
+            </select>
+          </div>
+          <button type="button" id="img2pdf-btn" class="accent">
+            📄 Generate PDF
+          </button>
+        </div>
+      </div>
+
+      <p id="img2pdf-status" class="status">Select images to begin.</p>
+    </section>
+
+    <section class="note-grid">
+      <article>
+        <h2>How it works</h2>
+        <p>
+          Each image becomes a page in the PDF. Drag to reorder. Everything runs <strong>entirely in your browser</strong> — no files are uploaded anywhere.
+        </p>
+      </article>
+      <article>
+        <h2>Supported formats</h2>
+        <p>
+          PNG, JPEG, WebP, BMP. You can mix different formats in a single PDF. Images are scaled to fit the page size.
+        </p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 V Media Tools &mdash; Free &amp; Open Source</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="/nav.js"></script>
+  <script src="/images-to-pdf.js"></script>
+  <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
+</body>
+
+</html>

@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Video to MP3 Converter – Vera Media Tools</title>
-  <meta name="description" content="Extract MP3 audio from any video URL — YouTube, Instagram, Twitter/X and more. Free, fast, no signup required." />
-  <meta name="keywords" content="video to mp3, youtube to mp3, extract audio, mp3 downloader, free mp3 converter" />
+  <title>Video to MP3 Converter – V Media Tools</title>
+  <meta name="description" content="Convert any video file to MP3 audio right in your browser. Drag and drop, pick bitrate, instant conversion. Your file never leaves your device." />
+  <meta name="keywords" content="video to mp3, convert video to mp3, extract audio, mp3 converter, free mp3 converter, browser converter, client-side" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="/mp3" />
   <link rel="stylesheet" href="/styles.css" />
@@ -16,22 +16,10 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="/" class="site-brand">
-        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
-        <span class="brand-name">Vera Media Tools</span>
+        <img src="/logo.png" alt="V Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">V Media Tools</span>
       </a>
-      <nav class="site-nav">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/downloader" class="nav-link">Video Downloader</a>
-        <a href="/mp3" class="nav-link active">Video to MP3</a>
-        <a href="/convert" class="nav-link">WAV → MP3</a>
-        <a href="/compressor" class="nav-link">Image Compressor</a>
-        <a href="/compressor/video" class="nav-link">Video Compressor</a>
-        <a href="/about" class="nav-link">About</a>
-      </nav>
-      <div id="status-indicator" class="status-indicator" title="Server status">
-        <span class="status-dot" id="status-dot"></span>
-        <span class="status-label" id="status-label">Checking…</span>
-      </div>
+      <nav class="site-nav" id="main-nav"></nav>
     </div>
   </header>
 
@@ -40,37 +28,49 @@
       <p class="eyebrow">All-in-one Media Tools</p>
       <h1>Video to MP3</h1>
       <p class="subcopy">
-        Paste any video URL and extract high-quality MP3 audio instantly. Works with YouTube, Instagram, Twitter/X and thousands more.
+        Upload any video file to extract high-quality MP3 audio <strong>right in your browser</strong> — your file never leaves your device.
+        Supports MP4, MKV, AVI, MOV, WebM and more.
       </p>
     </section>
 
     <section class="panel">
-      <form id="mp3-form" class="download-form">
-        <label for="mp3-url">Video URL</label>
-        <div class="input-row">
-          <input id="mp3-url" name="mp3-url" type="url" placeholder="https://www.youtube.com/watch?v=..."
-            required />
-          <button type="submit" id="mp3-fetch-button">Fetch</button>
-        </div>
-      </form>
-
-      <div id="mp3-meta" class="mp3-meta hidden">
-        <article id="mp3-preview-card" class="preview-card">
-          <img id="mp3-thumbnail" alt="Video thumbnail" />
-          <div class="preview-meta">
-            <p id="mp3-video-title" class="video-title"></p>
-            <p id="mp3-video-author" class="video-author"></p>
-          </div>
-        </article>
+      <!-- First-load notice -->
+      <div id="mp3-wasm-notice" class="wasm-notice">
+        📦 <strong>First-time use:</strong> Downloads ~30 MB of the video engine once. After that it&rsquo;s cached and loads instantly.
       </div>
 
-      <div id="mp3-download-row" class="mp3-download-row hidden">
-        <button type="button" id="mp3-download-button" class="accent">
-          🎵 Download MP3
+      <!-- Drop zone — hidden after file is selected -->
+      <div id="mp3-drop-zone" class="drop-zone">
+        <p class="drop-label">📂 Drag your video file here</p>
+        <p class="drop-sublabel">or click to browse — MP4, MKV, AVI, MOV, WebM (max 500 MB)</p>
+        <input type="file" id="mp3-file-input" accept="video/*,.mp4,.mkv,.avi,.mov,.webm,.flv,.wmv,.3gp" hidden />
+      </div>
+
+      <!-- File info — shown after file is loaded -->
+      <div id="mp3-upload-info" class="convert-info hidden">
+        <p id="mp3-upload-filename" class="convert-filename"></p>
+        <p id="mp3-upload-filesize" class="convert-filesize"></p>
+        <button type="button" id="mp3-upload-change-btn" class="secondary" style="margin-top:10px;max-width:180px;">
+          Upload Another
         </button>
       </div>
 
-      <p id="mp3-status" class="status">Paste a video URL to get started.</p>
+      <div class="controls convert-controls">
+        <div class="control">
+          <label for="mp3-upload-bitrate">MP3 Bitrate</label>
+          <select id="mp3-upload-bitrate">
+            <option value="128">128 kbps</option>
+            <option value="192">192 kbps</option>
+            <option value="256">256 kbps</option>
+            <option value="320" selected>320 kbps (Best)</option>
+          </select>
+        </div>
+        <button type="button" id="mp3-upload-convert-button" class="accent" disabled>
+          🎵 Convert to MP3
+        </button>
+      </div>
+
+      <p id="mp3-status" class="status">Select a video file to begin.</p>
 
       <div id="mp3-progress-container" class="progress-container hidden">
         <div class="progress-track">
@@ -84,26 +84,27 @@
       <article>
         <h2>How it works</h2>
         <p>
-          The server uses <code>yt-dlp</code> to extract the best audio stream
-          and <code>FFmpeg</code> to encode it as high-quality MP3.
+          Conversion runs <strong>entirely in your browser</strong> using FFmpeg.wasm (WebAssembly).
+          Your video file never leaves your device — zero upload, zero server processing. Privacy first.
         </p>
       </article>
       <article>
-        <h2>Supported sites</h2>
+        <h2>Supported formats</h2>
         <p>
-          YouTube, Instagram, Vimeo, Twitter/X, SoundCloud, Dailymotion and
-          1000+ more sites.
+          MP4, MKV, AVI, MOV, WebM, FLV, WMV, 3GP and more.
+          Bitrate options: 128, 192, 256, or 320 kbps.
         </p>
       </article>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+    <p>&copy; 2026 V Media Tools &mdash; Free &amp; Open Source</p>
   </footer>
 
+  <script src="/nav.js"></script>
+  <script src="/ffmpeg-loader.js"></script>
   <script src="/mp3.js"></script>
-  <script src="/status.js"></script>
   <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
 </body>
 

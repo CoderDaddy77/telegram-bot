@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About – Vera Media Tools</title>
+  <title>About – V Media Tools</title>
   <meta name="description"
-    content="About Vera Media Tools — a free, open-source all-in-one media toolkit for downloading videos, extracting audio, converting and resizing files." />
+    content="About V Media Tools — a free, open-source media toolkit. Convert audio, compress images and videos — all in your browser, no upload needed." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="/about" />
   <link rel="stylesheet" href="/styles.css" />
@@ -16,74 +16,67 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="/" class="site-brand">
-        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
-        <span class="brand-name">Vera Media Tools</span>
+        <img src="/logo.png" alt="V Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">V Media Tools</span>
       </a>
-      <nav class="site-nav">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/downloader" class="nav-link">Video Downloader</a>
-        <a href="/mp3" class="nav-link">Video to MP3</a>
-        <a href="/convert" class="nav-link">WAV → MP3</a>
-        <a href="/compressor" class="nav-link">Image Compressor</a>
-        <a href="/compressor/video" class="nav-link">Video Compressor</a>
-        <a href="/about" class="nav-link active">About</a>
-      </nav>
-      <div id="status-indicator" class="status-indicator" title="Server status">
-        <span class="status-dot" id="status-dot"></span>
-        <span class="status-label" id="status-label">Checking…</span>
-      </div>
+      <nav class="site-nav" id="main-nav"></nav>
     </div>
   </header>
 
   <main class="shell about-shell">
     <section class="hero">
-      <h1>About Vera Media Tools</h1>
+      <h1>About V Media Tools</h1>
     </section>
 
     <section class="about-content">
       <div class="about-block">
-        <h2>What is Vera Media Tools?</h2>
+        <h2>What is V Media Tools?</h2>
         <p>
-          Vera Media Tools is a free, open-source all-in-one media toolkit built for speed and simplicity.
-          Download videos, extract audio, convert files, and resize images — no accounts or signups required.
+          V Media Tools is a free, open-source media toolkit built for speed and privacy.
+          Convert audio, compress images and videos — no accounts, no signups, no data uploaded to any server.
         </p>
       </div>
 
       <div class="about-block">
         <h2>How does it work?</h2>
         <p>
-          Powered by <strong>yt-dlp</strong> for video downloading and
-          <strong>FFmpeg</strong> for media processing. Image resizing runs entirely
-          in your browser using the Canvas API — no upload needed.
-          Everything else runs server-side — your browser just sends requests and receives the final files.
+          Everything runs <strong>entirely in your browser</strong> using WebAssembly and the Canvas API.
+          Your files never leave your device — no cloud processing, no server uploads.
+          <br><br>
+          <strong>Image Compressor</strong> uses the Canvas API with binary search to hit your target size.<br>
+          <strong>WAV → MP3</strong> and <strong>Video to MP3</strong> use <strong>lamejs</strong> / <strong>FFmpeg.wasm</strong> for in-browser encoding.<br>
+          <strong>Video Compressor</strong> uses <strong>FFmpeg.wasm</strong> (H.264) to process video locally.
         </p>
       </div>
 
       <div class="about-block">
         <h2>Available tools</h2>
         <ul>
-          <li><strong>Video Downloader</strong> — Download MP4 videos up to 4K from 1000+ sites.</li>
-          <li><strong>Video to MP3</strong> — Extract high-quality MP3 audio from any video URL.</li>
+          <li><strong>Video to MP3</strong> — Upload any video, extract MP3 audio in your browser.</li>
           <li><strong>WAV → MP3 Converter</strong> — Convert WAV files to MP3 at your chosen bitrate.</li>
-          <li><strong>Video to GIF</strong> — Convert video clips into animated GIFs. <em>Coming soon.</em></li>
-          <li><strong>Image Compressor</strong> — Compress PNG/JPEG without quality loss. <em>Coming soon.</em></li>
+          <li><strong>Image Compressor</strong> — Compress PNG/JPEG/WebP to a target size in KB.</li>
+          <li><strong>Video Compressor</strong> — Reduce video file size with target MB, %, or CRF control.</li>
+          <li><strong>Image Converter</strong> — Convert between PNG, JPEG, WebP and BMP formats.</li>
+          <li><strong>Images to PDF</strong> — Combine multiple images into a single PDF document.</li>
+          <li><strong>Word to PDF</strong> — Convert DOCX documents to PDF in your browser.</li>
+          <li><strong>PPT to PDF</strong> — Convert PowerPoint presentations to PDF.</li>
         </ul>
       </div>
 
       <div class="about-block">
         <h2>Is it free?</h2>
         <p>
-          Yes — 100% free, no ads, no tracking, no hidden costs.
+          Yes — 100% free, no ads, no tracking, no hidden costs. Your files are processed locally and never stored anywhere.
         </p>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+    <p>&copy; 2026 V Media Tools &mdash; Free &amp; Open Source</p>
   </footer>
 
-  <script src="/status.js"></script>
+  <script src="/nav.js"></script>
   <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
 </body>
 

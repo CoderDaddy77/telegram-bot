@@ -1,0 +1,43 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/mp3", "destination": "/mp3.html" },
+      { "source": "/convert", "destination": "/convert.html" },
+      { "source": "/compressor", "destination": "/compressor.html" },
+      { "source": "/compressor/video", "destination": "/video-compressor.html" },
+      { "source": "/downloader", "destination": "/downloader.html" },
+      { "source": "/image-converter", "destination": "/image-converter.html" },
+      { "source": "/images-to-pdf", "destination": "/images-to-pdf.html" },
+      { "source": "/word-to-pdf", "destination": "/word-to-pdf.html" },
+      { "source": "/ppt-to-pdf", "destination": "/ppt-to-pdf.html" },
+      { "source": "/about", "destination": "/about.html" }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|html|css)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**/*.wasm",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=86400" },
+          { "key": "Content-Type", "value": "application/wasm" }
+        ]
+      },
+      {
+        "source": "**/*.@(png|jpg|jpeg|svg|ico)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=604800" }
+        ]
+      }
+    ]
+  }
+}

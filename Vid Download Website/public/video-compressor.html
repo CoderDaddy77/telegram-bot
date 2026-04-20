@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Video Compressor – Vera Media Tools</title>
-  <meta name="description" content="Compress MP4 videos to a target file size in MB. Upload a file or paste a video link. Free, no signup." />
-  <meta name="keywords" content="video compressor, reduce video size, compress mp4, video size reducer, shrink video, free video compression" />
+  <title>Video Compressor – V Media Tools</title>
+  <meta name="description" content="Compress MP4 videos to a target file size in MB. All processing happens in your browser — your file never leaves your device. Free, no signup." />
+  <meta name="keywords" content="video compressor, reduce video size, compress mp4, video size reducer, shrink video, free video compression, client-side, browser" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="/compressor/video" />
   <link rel="stylesheet" href="/styles.css" />
@@ -16,22 +16,10 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="/" class="site-brand">
-        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
-        <span class="brand-name">Vera Media Tools</span>
+        <img src="/logo.png" alt="V Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">V Media Tools</span>
       </a>
-      <nav class="site-nav">
-        <a href="/" class="nav-link">Home</a>
-        <a href="/downloader" class="nav-link">Video Downloader</a>
-        <a href="/mp3" class="nav-link">Video to MP3</a>
-        <a href="/convert" class="nav-link">WAV → MP3</a>
-        <a href="/compressor" class="nav-link">Image Compressor</a>
-        <a href="/compressor/video" class="nav-link active">Video Compressor</a>
-        <a href="/about" class="nav-link">About</a>
-      </nav>
-      <div id="status-indicator" class="status-indicator" title="Server status">
-        <span class="status-dot" id="status-dot"></span>
-        <span class="status-label" id="status-label">Checking…</span>
-      </div>
+      <nav class="site-nav" id="main-nav"></nav>
     </div>
   </header>
 
@@ -40,43 +28,33 @@
       <p class="eyebrow">All-in-one Media Tools</p>
       <h1>Video Compressor</h1>
       <p class="subcopy">
-        Reduce your video file size using H.265/HEVC — the same high-efficiency codec your phone uses. Upload a file or paste a video link — set target MB, reduce by percentage, or dial quality manually.
+        Reduce your video file size <strong>right in your browser</strong> — your file never leaves your device. Set target MB, reduce by percentage, or dial quality manually.
       </p>
     </section>
 
     <section class="panel">
-      <!-- Source Tabs: Upload / URL -->
-      <div class="vc-source-tabs">
-        <button class="comp-tab active" id="vc-tab-upload" data-source="upload">📁 Upload File</button>
-        <button class="comp-tab" id="vc-tab-url" data-source="url">🔗 Video URL</button>
+      <!-- First-load notice -->
+      <div id="vc-wasm-notice" class="wasm-notice">
+        📦 <strong>First-time use:</strong> Downloads ~30 MB of the video engine once. After that it&rsquo;s cached and loads instantly.
       </div>
 
       <!-- Upload Source -->
-      <div id="vc-source-upload">
-        <div id="vc-drop-zone" class="drop-zone">
-          <p class="drop-label">Drag your video here</p>
-          <p class="drop-sublabel">MP4, MKV, MOV, AVI, WEBM — or click to browse</p>
-          <input type="file" id="vc-file-input" accept="video/mp4,video/x-matroska,video/quicktime,video/avi,video/webm,.mp4,.mkv,.mov,.avi,.webm" hidden />
-        </div>
-        <div id="vc-file-info" class="convert-info hidden">
-          <p id="vc-filename" class="convert-filename"></p>
-          <p id="vc-original-size" class="convert-filesize"></p>
-          <button type="button" id="vc-change-btn" class="secondary" style="margin-top:10px;max-width:180px;">
-            Choose Another
-          </button>
-        </div>
+      <div id="vc-drop-zone" class="drop-zone">
+        <p class="drop-label">Drag your video here</p>
+        <p class="drop-sublabel">MP4, MKV, MOV, AVI, WEBM — or click to browse</p>
+        <input type="file" id="vc-file-input" accept="video/mp4,video/x-matroska,video/quicktime,video/avi,video/webm,.mp4,.mkv,.mov,.avi,.webm" hidden />
+      </div>
+      <div id="vc-file-info" class="convert-info hidden">
+        <p id="vc-filename" class="convert-filename"></p>
+        <p id="vc-original-size" class="convert-filesize"></p>
+        <button type="button" id="vc-change-btn" class="secondary" style="margin-top:10px;max-width:180px;">
+          Choose Another
+        </button>
       </div>
 
-      <!-- URL Source -->
-      <div id="vc-source-url" class="hidden">
-        <div class="input-row" style="margin-top:8px;">
-          <input type="url" id="vc-url-input" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;" />
-          <button type="button" id="vc-fetch-btn" style="max-width:120px;">Fetch</button>
-        </div>
-        <div id="vc-url-info" class="convert-info hidden" style="margin-top:12px;">
-          <p id="vc-url-title" class="convert-filename"></p>
-          <p id="vc-url-duration" class="convert-filesize"></p>
-        </div>
+      <!-- Loading indicator for FFmpeg.wasm -->
+      <div id="vc-wasm-loading" class="hidden" style="margin-top:16px; text-align:center;">
+        <p class="status" style="color: #8b5cf6;">⏳ Loading video engine (first time may take a moment)…</p>
       </div>
 
       <!-- Compression Controls -->
@@ -159,7 +137,7 @@
         <p class="progress-text" id="vc-progress-text">0%</p>
       </div>
 
-      <p id="vc-status" class="status">Upload a video or paste a link to begin.</p>
+      <p id="vc-status" class="status">Upload a video to begin.</p>
 
       <!-- Result -->
       <div id="vc-result" class="comp-result hidden">
@@ -183,7 +161,7 @@
       <article>
         <h2>How it works</h2>
         <p>
-          We use FFmpeg with CRF (Constant Rate Factor) to intelligently reduce file size. It analyzes each frame and allocates bits where they matter — keeping visuals clear while shrinking the file.
+          Video compression runs <strong>entirely in your browser</strong> using WebAssembly (FFmpeg.wasm). Your file never leaves your device — zero upload, zero server processing. Privacy first.
         </p>
       </article>
       <article>
@@ -196,11 +174,12 @@
   </main>
 
   <footer class="site-footer">
-    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+    <p>&copy; 2026 V Media Tools &mdash; Free &amp; Open Source</p>
   </footer>
 
+  <script src="/nav.js"></script>
+  <script src="/ffmpeg-loader.js"></script>
   <script src="/video-compressor.js"></script>
-  <script src="/status.js"></script>
   <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
 </body>
 

@@ -1,7 +1,16 @@
 node_modules/
-downloads/
-uploads/
+.firebase/
+.firebaserc
 *.log
-.vscode/
-debug_*.py
-debug_*.txt
+*.out.log
+*.err.log
+debug_output.txt
+yt_err.txt
+uploads/
+downloads/
+.DS_Store
+Thumbs.db
+
+# FFmpeg WASM binaries — too large for git (30MB+)
+# Run: npm run copy-ffmpeg  to regenerate
+public/ffmpeg-wasm/

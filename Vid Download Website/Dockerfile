@@ -1,34 +1,37 @@
-# Use an official Node.js runtime as the base image
-FROM node:20-bookworm-slim
+# Vera Media Tools — Dockerfile for Render
+# Node.js + LibreOffice for server-side file conversions
 
-# Install Python 3, pip, and FFmpeg (with libx265 support for HEVC)
+FROM node:20-slim
+
+# Install LibreOffice + ffmpeg + yt-dlp
 RUN apt-get update && apt-get install -y \
+    libreoffice \
+    libreoffice-writer \
+    libreoffice-impress \
+    libreoffice-calc \
+    fonts-liberation \
+    fonts-dejavu \
+    ffmpeg \
     python3 \
     python3-pip \
-    ffmpeg \
+    --no-install-recommends \
+    && pip3 install --break-system-packages yt-dlp \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp via pip
-RUN pip3 install --break-system-packages yt-dlp
+WORKDIR /app
 
-# Set the working directory in the container
-WORKDIR /usr/src/app
-
-# Copy the package.json files and install dependencies
+# Copy package files and install Node deps
 COPY package*.json ./
-RUN npm install --production
+RUN npm install --omit=dev
 
-# Copy the rest of the application files
-COPY . .
+# Copy server and public files
+COPY server.js ./
+COPY public/ ./public/
 
-# Create directories for downloads and uploads
-RUN mkdir -p downloads uploads
+# LibreOffice user profile (avoids permission issues)
+ENV HOME=/tmp
 
-# Use system ffmpeg (not ffmpeg-static) — system ffmpeg has libx265 support
-ENV FFMPEG_PATH=/usr/bin/ffmpeg
-
-# Expose the port (Render sets PORT env var)
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+CMD ["node", "server.js"]

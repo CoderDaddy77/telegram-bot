@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vera Media Tools – All-in-One Free Online Media Tools</title>
+  <title>V Media Tools – Free Online Media & File Converter Tools</title>
   <meta name="description"
-    content="Vera Media Tools – All-in-one free online media tools. Download videos, extract MP3 audio, convert WAV to MP3, resize images. Fast, free, no signup required." />
-  <meta name="keywords" content="video downloader, mp3 extractor, wav to mp3 converter, image resizer, free media tools, youtube downloader, online tools" />
+    content="V Media Tools – Free online media toolkit. Convert files, compress images/videos, extract audio, convert documents to PDF — all in your browser. No signup required." />
+  <meta name="keywords" content="mp3 converter, wav to mp3, image compressor, video compressor, free media tools, browser tools, client-side, pdf converter, image converter, word to pdf, ppt to pdf" />
   <meta name="robots" content="index, follow" />
-  <meta property="og:title" content="Vera Media Tools – All-in-One Free Online Media Tools" />
-  <meta property="og:description" content="Download videos, extract MP3, convert WAV, resize images — all free, no signup." />
+  <meta property="og:title" content="V Media Tools – Free Online Media & File Converter Tools" />
+  <meta property="og:description" content="Convert files, compress media, extract audio, convert documents to PDF — all free, in your browser." />
   <meta property="og:type" content="website" />
   <link rel="canonical" href="/" />
   <link rel="stylesheet" href="/styles.css" />
@@ -20,22 +20,10 @@
   <header class="site-header">
     <div class="header-inner">
       <a href="/" class="site-brand">
-        <img src="/logo.png" alt="Vera Media Tools Logo" class="brand-logo" />
-        <span class="brand-name">Vera Media Tools</span>
+        <img src="/logo.png" alt="V Media Tools Logo" class="brand-logo" />
+        <span class="brand-name">V Media Tools</span>
       </a>
-      <nav class="site-nav">
-        <a href="/" class="nav-link active">Home</a>
-        <a href="/downloader" class="nav-link">Video Downloader</a>
-        <a href="/mp3" class="nav-link">Video to MP3</a>
-        <a href="/convert" class="nav-link">WAV → MP3</a>
-        <a href="/compressor" class="nav-link">Image Compressor</a>
-        <a href="/compressor/video" class="nav-link">Video Compressor</a>
-        <a href="/about" class="nav-link">About</a>
-      </nav>
-      <div id="status-indicator" class="status-indicator" title="Server status">
-        <span class="status-dot" id="status-dot"></span>
-        <span class="status-label" id="status-label">Checking…</span>
-      </div>
+      <nav class="site-nav" id="main-nav"></nav>
     </div>
   </header>
 
@@ -43,52 +31,89 @@
     <section class="home-hero-compact">
       <p class="home-tagline">All-in-one Media Tools</p>
       <h1>Free Media Toolkit</h1>
-      <p class="home-sub">Download videos, extract audio, convert files, compress media — all free, no signup.</p>
+      <p class="home-sub">Convert, compress and process media files — all free, all in your browser. Your files never leave your device.</p>
     </section>
 
-    <section class="tools-grid">
-      <a href="/downloader" class="tool-card">
-        <div class="tool-icon">▶</div>
-        <h2>Video Downloader</h2>
-        <p>Download MP4 from YouTube, Instagram, Twitter/X and 1000+ sites. Pick resolution, see file size.</p>
-        <span class="tool-tag">MP4 · 4K</span>
-      </a>
+    <!-- ═══ MEDIA TOOLS ═══ -->
+    <section class="tools-section">
+      <h2 class="tools-section-title">🎬 Media Tools</h2>
+      <div class="tools-grid">
+        <a href="/downloader" class="tool-card tool-card--hot">
+          <div class="tool-icon">⬇️</div>
+          <h2>Video Downloader</h2>
+          <p>Download from YouTube, Instagram, TikTok, Twitter/X, Facebook and 1000+ sites. MP4 or MP3.</p>
+          <span class="tool-tag tool-tag--hot">yt-dlp · 1000+ Sites</span>
+        </a>
+        <a href="/mp3" class="tool-card">
+          <div class="tool-icon">🎵</div>
+          <h2>Video to MP3</h2>
+          <p>Upload any video file and extract high-quality MP3 audio instantly — processed in your browser.</p>
+          <span class="tool-tag">Browser · Private</span>
+        </a>
 
-      <a href="/mp3" class="tool-card">
-        <div class="tool-icon">🎵</div>
-        <h2>Video to MP3</h2>
-        <p>Extract high-quality MP3 audio from any video URL — YouTube, Instagram, and more.</p>
-        <span class="tool-tag">MP3 · Free</span>
-      </a>
+        <a href="/convert" class="tool-card">
+          <div class="tool-icon">♫</div>
+          <h2>WAV → MP3</h2>
+          <p>Convert your WAV audio files to compact MP3 with custom bitrate. Instant, no upload.</p>
+          <span class="tool-tag">Drag & Drop</span>
+        </a>
 
-      <a href="/convert" class="tool-card">
-        <div class="tool-icon">♫</div>
-        <h2>WAV → MP3</h2>
-        <p>Convert your WAV audio files to compact MP3 instantly with custom bitrate.</p>
-        <span class="tool-tag">Drag & Drop</span>
-      </a>
+        <a href="/compressor" class="tool-card">
+          <div class="tool-icon">🗜️</div>
+          <h2>Image Compressor</h2>
+          <p>Compress PNG, JPEG, WebP to a target file size in KB. Binary search finds the perfect quality.</p>
+          <span class="tool-tag">Target KB</span>
+        </a>
 
-      <a href="/compressor" class="tool-card">
-        <div class="tool-icon">🗜️</div>
-        <h2>Image Compressor</h2>
-        <p>Compress images to a target file size in KB. Set 200 KB and we'll find the perfect quality automatically.</p>
-        <span class="tool-tag">Target KB</span>
-      </a>
+        <a href="/compressor/video" class="tool-card">
+          <div class="tool-icon">📹</div>
+          <h2>Video Compressor</h2>
+          <p>Reduce video file size in your browser. Set target MB, shrink by percentage, or tune quality manually.</p>
+          <span class="tool-tag">Target MB · %</span>
+        </a>
+      </div>
+    </section>
 
-      <a href="/compressor/video" class="tool-card">
-        <div class="tool-icon">📹</div>
-        <h2>Video Compressor</h2>
-        <p>Reduce MP4 video file size. Set target MB, shrink by percentage, or fine-tune quality manually. Upload or paste a URL.</p>
-        <span class="tool-tag">Target MB · %</span>
-      </a>
+    <!-- ═══ FILE CONVERTERS ═══ -->
+    <section class="tools-section">
+      <h2 class="tools-section-title">📄 File Converters</h2>
+      <div class="tools-grid">
+        <a href="/ppt-to-pdf" class="tool-card">
+          <div class="tool-icon">📊</div>
+          <h2>PPT to PDF</h2>
+          <p>Convert PowerPoint presentations to PDF. Each slide becomes a page — text, shapes and images.</p>
+          <span class="tool-tag">PPTX · Browser</span>
+        </a>
+
+        <a href="/word-to-pdf" class="tool-card">
+          <div class="tool-icon">📝</div>
+          <h2>Word to PDF</h2>
+          <p>Convert DOCX documents to PDF right in your browser. Supports text, headings, lists, tables.</p>
+          <span class="tool-tag">DOCX · Browser</span>
+        </a>
+
+        <a href="/images-to-pdf" class="tool-card">
+          <div class="tool-icon">🖼️</div>
+          <h2>Images to PDF</h2>
+          <p>Combine multiple images into a single PDF. Drag to reorder pages, pick page size and margins.</p>
+          <span class="tool-tag">Multi-page · Free</span>
+        </a>
+
+        <a href="/image-converter" class="tool-card">
+          <div class="tool-icon">🔄</div>
+          <h2>Image Converter</h2>
+          <p>Convert between PNG, JPEG, WebP and BMP formats instantly. Control quality for lossy formats.</p>
+          <span class="tool-tag">PNG · JPG · WebP</span>
+        </a>
+      </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>&copy; 2026 Vera Media Tools &mdash; Free &amp; Open Source</p>
+    <p>&copy; 2026 V Media Tools &mdash; Free &amp; Open Source</p>
   </footer>
 
-  <script src="/status.js"></script>
+  <script src="/nav.js"></script>
   <script>if (history.scrollRestoration) history.scrollRestoration = 'manual'; window.scrollTo(0, 0);</script>
 </body>
 
