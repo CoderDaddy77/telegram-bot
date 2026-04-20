@@ -314,5 +314,32 @@ if (process.env.NODE_ENV !== 'production') {
 
 app.listen(PORT, () => {
   console.log(`\n✅ Vera Media Tools backend running on http://localhost:${PORT}`);
-  console.log(`   API: /api/ppt-to-pdf  /api/word-to-pdf  /api/status\n`);
+  console.log(`   API: /api/ppt-to-pdf  /api/word-to-pdf  /api/download  /api/status\n`);
+
+  // ─── Self-ping to prevent Render free tier from sleeping ───
+  // Render sets RENDER_EXTERNAL_HOSTNAME automatically (e.g. vera-media-tools-backend.onrender.com)
+  const selfHost = process.env.RENDER_EXTERNAL_HOSTNAME;
+  if (selfHost) {
+    const https = require('https');
+    const PING_INTERVAL_MS = 10 * 60 * 1000; // every 10 minutes
+
+    function selfPing() {
+      const url = `https://${selfHost}/api/status`;
+      https.get(url, (res) => {
+        console.log(`[self-ping] ✅ ${url} → ${res.statusCode}`);
+      }).on('error', (err) => {
+        console.warn(`[self-ping] ⚠️  ${err.message}`);
+      });
+    }
+
+    // First ping after 1 minute, then every 10 minutes
+    setTimeout(() => {
+      selfPing();
+      setInterval(selfPing, PING_INTERVAL_MS);
+    }, 60 * 1000);
+
+    console.log(`   🔁 Self-ping active → https://${selfHost}/api/status every 10 min\n`);
+  } else {
+    console.log(`   ℹ️  No RENDER_EXTERNAL_HOSTNAME set — self-ping disabled (local dev)\n`);
+  }
 });
